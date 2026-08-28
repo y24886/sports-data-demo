@@ -1342,7 +1342,7 @@ tr:hover td{background:var(--bg-1)}
 
 <div class="sport-switch">
   <button class="sport-btn active" onclick="switchSport('baseball')"> 棒球資料標準 v0.4.1</button>
-  <button class="sport-btn" onclick="switchSport('badminton')"> 羽球資料標準 v0.4.1</button>
+  <button class="sport-btn" onclick="switchSport('badminton')"> 羽球資料標準 v0.4.2</button>
   <button class="sport-btn" onclick="switchSport('review')">意見回覆追蹤</button>
 </div>
 
@@ -3229,6 +3229,12 @@ curl -X GET \
         <div style="font-size:11px;color:var(--text-3)">2026-08-24</div>
         <div style="font-size:11.5px"><b>本團隊自主檢視發現之改進（非運科中心意見）</b>：與棒球端同步，因應羽球訓練場域、學校體育館等非賽事場館之資料上傳需求，Venue 新增 venue_type（場館類型：STADIUM／GYMNASIUM／TRAINING_CENTER／SCHOOL／OTHER），使訓練與賽事場館之管理歸屬得以區分。Organization 之 org_type／org_level 調整為跨運動共用設計。ERD 同步更新。</div>
       </div>
+      <div class="log-row">
+        <div class="log-time">v0.4.2-draft</div>
+        <div><span class="log-tag minor">MINOR</span></div>
+        <div style="font-size:11px;color:var(--text-3)">2026-08-24</div>
+        <div style="font-size:11.5px">依國家運動科學中心第二輪意見（羽球部分）調整：① Match.games_won_a／games_won_b 由必填改為<b>條件式必填</b>，status 為 WALKOVER（賽前退賽）等未實際完賽情形得留空，與 status 欄位（CL-B06）連動，解決與必填規則之牴觸；② <b>新增 Court（場地）實體</b>並將 court_name 自 Venue 移入——原 court_name 置於以 venue_id 為主鍵之 Venue，遇同一場館多面場地時將違反正規化，本版以 Venue ‖—◇ Court 一對多關係表達，Venue 另移除 court_count（改由 Court 筆數計算）；③ Match 新增 court_id（FK→Court），指向實際使用之場地。ERD 同步更新，棒球端不受影響。</div>
+      </div>
     </div>
   </div>
 
@@ -3247,6 +3253,8 @@ curl -X GET \
 erDiagram
     ORGANIZATION ||--o{ PLAYER : "affiliates (optional)"
     VENUE ||--o{ MATCH : hosts
+    VENUE ||--o{ COURT : contains
+    COURT ||--o{ MATCH : "played on"
     VENUE ||--o{ SESSION : hosts
     TOURNAMENT ||--o{ MATCH : contains
     ORGANIZATION ||--o{ TOURNAMENT : hosts
@@ -3281,9 +3289,14 @@ erDiagram
         string venue_name
         string venue_type
         string city_code
-        int court_count
-        string court_name
+        decimal court_length_m
         decimal court_width_m
+    }
+    COURT {
+        string court_id PK
+        string venue_id FK
+        string court_name
+        string court_type
     }
     TOURNAMENT {
         string tournament_id PK
@@ -3332,6 +3345,7 @@ erDiagram
         string match_id PK
         string tournament_id FK
         string venue_id FK
+        string court_id FK
         date match_date
         string round_name
         string discipline
@@ -3440,7 +3454,7 @@ erDiagram
 
   <!-- Venue -->
   <div class="dict-ent">
-    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Venue（場館）</span><span class="dict-cnt">8 欄</span></div>
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Venue（場館）</span><span class="dict-cnt">6 欄</span></div>
     <div class="dict-body">
     <div style="padding:8px 12px;font-size:10.5px;color:var(--text-3);background:var(--bg-1);border-left:2px solid var(--accent)">
       設計說明：與棒球標準共用同一套 Venue 設計原則，參照 MLBAM GUMBO gameData.venue 節點與 schema.org StadiumOrArena 之屬性設計；場地尺寸則改依 BWF Laws of Badminton 之規範。
@@ -3452,14 +3466,31 @@ erDiagram
         <tr><td>2</td><td>Venue</td><td class="mono">venue_name</td><td>場館名稱。場館正式中文名稱</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(60)</td><td>—</td><td class="src-ref">自定義</td></tr>
         <tr><td>3</td><td>Venue</td><td class="mono">venue_type <span class="tag new" style="margin-left:4px">NEW</span></td><td>場館類型。本場館之性質分類</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>STADIUM / GYMNASIUM / TRAINING_CENTER / SCHOOL / OTHER</td><td class="src-ref">自定義。使羽球訓練場域、學校體育館等非賽事場館取得正確身分，與棒球 Venue.venue_type 採同一套設計原則。羽球場地本身為規則定值，惟訓練與賽事場館之管理歸屬不同，仍須以本欄位區分</td></tr>
         <tr><td>4</td><td>Venue</td><td class="mono">city_code</td><td>縣市代碼。場館所在縣市行政代碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(5)</td><td>政府統一行政區代碼</td><td class="src-ref">臺灣行政院標準縣市代碼</td></tr>
-        <tr><td>5</td><td>Venue</td><td class="mono">court_count</td><td>球場數量。場館內合規羽球球場數量</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 1</td><td class="src-ref">自定義；概念對應 schema.org SportsActivityLocation 之場地容量屬性</td></tr>
-        <tr><td>6</td><td>Venue</td><td class="mono">court_length_m</td><td>球場長度。標準球場長度（公尺）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(4,2)</td><td>13.40（定值）</td><td class="src-ref">BWF Laws of Badminton, Law 1（球場規格） 單位：公尺（m），命名後綴已標註單位。</td></tr>
-        <tr><td>7</td><td>Venue</td><td class="mono">court_width_m</td><td>球場寬度。標準球場寬度（公尺，雙打邊線為準）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(4,2)</td><td>6.10（定值）</td><td class="src-ref">BWF Laws of Badminton, Law 1（球場規格） 單位：公尺（m），命名後綴已標註單位。</td></tr>
-        <tr><td>8</td><td>Venue</td><td class="mono">court_name <span class="tag new">NEW</span></td><td>場地名稱／編號。場館內個別場地之名稱或編號（如「A 場」「第 3 號球場」）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(20)</td><td>—</td><td class="src-ref">自定義，因應《羽球智慧場域數據紀錄規格 v2》court_name 欄位需求新增。既有 court_count 僅記錄場地總數，無法指出資料係來自哪一面場地，多場地場館之資料因而無法區分，本版補正</td></tr>
+        <tr><td>5</td><td>Venue</td><td class="mono">court_length_m</td><td>球場長度。標準球場長度（公尺）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(4,2)</td><td>13.40（定值）</td><td class="src-ref">BWF Laws of Badminton, Law 1（球場規格） 單位：公尺（m），命名後綴已標註單位。</td></tr>
+        <tr><td>6</td><td>Venue</td><td class="mono">court_width_m</td><td>球場寬度。標準球場寬度（公尺，雙打邊線為準）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(4,2)</td><td>6.10（定值）</td><td class="src-ref">BWF Laws of Badminton, Law 1（球場規格） 單位：公尺（m），命名後綴已標註單位。</td></tr>
       </tbody>
     </table></div>
     </div>
   </div>
+  <!-- Court -->
+  <div class="dict-ent">
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Court（場地）<span class="tag new" style="margin-left:8px">NEW</span></span><span class="dict-cnt">4 欄</span></div>
+    <div class="dict-body">
+    <div style="padding:8px 12px;font-size:10.5px;color:var(--text-3);background:var(--bg-1);border-left:2px solid var(--accent)">
+      設計說明：本實體因應運科中心意見新增。原將場地名稱（court_name）置於 Venue，惟 Venue 以 venue_id 為主鍵，一場館僅能記錄一筆，遇同一場館多面場地時，若以相同 venue_id 記錄多筆將違反正規化。故將「場地」自「場館」獨立為本實體，以 Venue ‖—◇ Court 一對多關係表達，一個場館可有多面場地。場地尺寸（court_length_m／court_width_m）因屬 BWF 規則定值、各場地一致，仍留存於 Venue 作為場館層級之標準規格。
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>項次</th><th>類別</th><th>屬性或關係</th><th>說明</th><th>選填<br>條件</th><th>最多<br>發生次數</th><th>資料型別</th><th>值域</th><th>附註</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Court</td><td class="mono">court_id <span class="tag pk">PK</span></td><td>場地識別碼。單一場地之唯一識別符</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(14)</td><td>TW-BDM-C-…</td><td class="src-ref">自定義。以所屬場館識別碼加場地序號組成，確保跨場館唯一</td></tr>
+        <tr><td>2</td><td>Court</td><td class="mono">venue_id <span class="tag fk">FK→Venue</span></td><td>所屬場館。本場地所屬之場館識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(11)</td><td>Venue.venue_id</td><td class="src-ref">自定義。表達 Venue ‖—◇ Court 之一對多歸屬關係</td></tr>
+        <tr><td>3</td><td>Court</td><td class="mono">court_name</td><td>場地名稱／編號。場館內個別場地之名稱或編號（如「A 場」「第 3 號球場」）</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(20)</td><td>—</td><td class="src-ref">自定義，因應《羽球智慧場域數據紀錄規格 v2》court_name 欄位需求。原置於 Venue，本版移入 Court 實體以符正規化</td></tr>
+        <tr><td>4</td><td>Court</td><td class="mono">court_type <span class="tag new">NEW</span></td><td>場地類型。本場地之地面或用途類型</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>MATCH／PRACTICE／INDOOR／OUTDOOR／OTHER</td><td class="src-ref">自定義。供區分比賽用場地與練習用場地，或室內外之別</td></tr>
+      </tbody>
+    </table></div>
+    </div>
+  </div>
+
 
   <!-- Tournament -->
   <div class="dict-ent">
@@ -3571,7 +3602,7 @@ erDiagram
 
   <!-- Match -->
   <div class="dict-ent">
-    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Match（單場對戰）</span><span class="dict-cnt">17 欄</span></div>
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Match（單場對戰）</span><span class="dict-cnt">18 欄</span></div>
     <div class="dict-body">
     <div class="tw"><table>
       <thead><tr><th>項次</th><th>類別</th><th>屬性或關係</th><th>說明</th><th>選填<br>條件</th><th>最多<br>發生次數</th><th>資料型別</th><th>值域</th><th>附註</th></tr></thead>
@@ -3581,18 +3612,19 @@ erDiagram
         <tr><td>3</td><td>Match</td><td class="mono">match_date</td><td>比賽日期。本場比賽實際舉行日期</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>date</td><td>ISO 8601 (YYYY-MM-DD)</td><td class="src-ref">自定義，因應易老師意見與運科中心文件比對過程中發現之欄位缺漏而新增（原設計遺漏日期欄位，屬必要修正）</td></tr>
         <tr><td>4</td><td>Match</td><td class="mono">round_name</td><td>輪次。賽事輪次或籤位（如32強、準決賽、決賽）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(20)</td><td>—</td><td class="src-ref">自定義，呼應易老師意見「賽事資訊」新增</td></tr>
         <tr><td>5</td><td>Match</td><td class="mono">venue_id <span class="tag fk">FK→Venue</span></td><td>比賽場地。比賽舉行場館識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(11)</td><td>Venue.venue_id</td><td class="src-ref">參照棒球 Game 實體之設計原則</td></tr>
-        <tr><td>6</td><td>Match</td><td class="mono">discipline</td><td>競賽類別。本場比賽所屬競賽類別</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>MS / WS / MD / WD / XD</td><td class="src-ref">BWF General Competition Regulations（2026/4/25 版）</td></tr>
-        <tr><td>7</td><td>Match</td><td class="mono">side_a_player_id <span class="tag fk">FK→Player</span> <span class="tag new">NEW</span></td><td>甲方選手。單打賽事之甲方選手識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string(11)</td><td>Player.player_id</td><td class="src-ref">自定義。<b>條件式必填</b>：discipline 為 MS／WS（單打）時必填，雙打時應留空。原設計未定義「甲方」「乙方」為何人，致 Player／Pair 實體無從連結，本版補正；JSON Schema 以 oneOf 表達單打／雙打二擇一之互斥條件</td></tr>
-        <tr><td>8</td><td>Match</td><td class="mono">side_b_player_id <span class="tag fk">FK→Player</span> <span class="tag new">NEW</span></td><td>乙方選手。單打賽事之乙方選手識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string(11)</td><td>Player.player_id</td><td class="src-ref">同上，條件式必填規則一致</td></tr>
-        <tr><td>9</td><td>Match</td><td class="mono">side_a_pair_id <span class="tag fk">FK→Pair</span> <span class="tag new">NEW</span></td><td>甲方配對。雙打賽事之甲方配對識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string(13)</td><td>Pair.pair_id</td><td class="src-ref">自定義。<b>條件式必填</b>：discipline 為 MD／WD／XD（雙打）時必填，單打時應留空</td></tr>
-        <tr><td>10</td><td>Match</td><td class="mono">side_b_pair_id <span class="tag fk">FK→Pair</span> <span class="tag new">NEW</span></td><td>乙方配對。雙打賽事之乙方配對識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string(13)</td><td>Pair.pair_id</td><td class="src-ref">同上，條件式必填規則一致</td></tr>
-        <tr><td>11</td><td>Match</td><td class="mono">event_category <span class="tag new">NEW</span></td><td>參賽組別。本場比賽所屬之參賽組別</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-B05</td><td class="src-ref">自定義。與 Player.player_level（選手層級）為不同概念，不可混用——一位層級為 AMT 之選手仍可報名公開組。置於 Match 而非 Tournament，係因同一賽事下常同時進行多個組別；棒球端採同一套設計（成棒甲組／乙組）</td></tr>
-        <tr><td>12</td><td>Match</td><td class="mono">status <span class="tag new">NEW</span></td><td>比賽狀態。本場比賽之最終狀態</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-B06</td><td class="src-ref">自定義，比照棒球 Game.status 補齊跨運動一致性。本欄位亦為比分完整性驗證之前提：Walkover（未戰而勝）之比賽不會產生 Rally／Game 資料，若無本欄位，資料品質檢核將誤判為資料缺漏，導致回饋予資料源頭單位之品質報告失真</td></tr>
-        <tr><td>13</td><td>Match</td><td class="mono">start_time <span class="tag new">NEW</span></td><td>開賽時間。本場比賽實際開始時間</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>timestamp</td><td>ISO 8601 帶時區位移，預設 +08:00</td><td class="src-ref">自定義。時區規範詳 §1 適用範圍「時間與時區」</td></tr>
-        <tr><td>14</td><td>Match</td><td class="mono">duration_min <span class="tag new">NEW</span></td><td>對戰時長（分鐘）。本場比賽實際進行時長</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>0–300 分鐘</td><td class="src-ref">自定義。採獨立欄位而非由起訖時間推算，係因羽球中斷、暫停常見，實際時長與起訖差值不同。單位採分鐘：羽球單場多為 20–90 分鐘量級，秒級精度對賽事分析無實益；若感測端原生輸出為秒值，應於 ETL 階段換算後寫入，原始秒值保留於 Raw 層 單位：分鐘（min），命名後綴已標註單位</td></tr>
-        <tr><td>15</td><td>Match</td><td class="mono">games_won_a</td><td>甲方局數。甲方（或甲配對）獲勝局數</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>integer</td><td>0–2</td><td class="src-ref">BWF Laws of Badminton, Law 7（三局兩勝制）</td></tr>
-        <tr><td>16</td><td>Match</td><td class="mono">games_won_b</td><td>乙方局數。乙方（或乙配對）獲勝局數</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>integer</td><td>0–2</td><td class="src-ref">同上，Law 7</td></tr>
-        <tr><td>17</td><td>Match</td><td class="mono">winner_side</td><td>勝方。本場比賽最終獲勝之一方</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>A / B</td><td class="src-ref">BWF Laws of Badminton, Law 7</td></tr>
+        <tr><td>6</td><td>Match</td><td class="mono">court_id <span class="tag fk">FK→Court</span> <span class="tag new">NEW</span></td><td>比賽場地面。本場比賽實際使用之場地（多面場地之場館適用）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(14)</td><td>Court.court_id</td><td class="src-ref">自定義。因場地已自 Venue 獨立為 Court 實體，本欄位指向實際使用之場地；單面場地之場館得留空。置於 Match 而非逐球之 Shot，係因一場比賽通常固定一面場地</td></tr>
+        <tr><td>7</td><td>Match</td><td class="mono">discipline</td><td>競賽類別。本場比賽所屬競賽類別</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>MS / WS / MD / WD / XD</td><td class="src-ref">BWF General Competition Regulations（2026/4/25 版）</td></tr>
+        <tr><td>8</td><td>Match</td><td class="mono">side_a_player_id <span class="tag fk">FK→Player</span> <span class="tag new">NEW</span></td><td>甲方選手。單打賽事之甲方選手識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string(11)</td><td>Player.player_id</td><td class="src-ref">自定義。<b>條件式必填</b>：discipline 為 MS／WS（單打）時必填，雙打時應留空。原設計未定義「甲方」「乙方」為何人，致 Player／Pair 實體無從連結，本版補正；JSON Schema 以 oneOf 表達單打／雙打二擇一之互斥條件</td></tr>
+        <tr><td>9</td><td>Match</td><td class="mono">side_b_player_id <span class="tag fk">FK→Player</span> <span class="tag new">NEW</span></td><td>乙方選手。單打賽事之乙方選手識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string(11)</td><td>Player.player_id</td><td class="src-ref">同上，條件式必填規則一致</td></tr>
+        <tr><td>10</td><td>Match</td><td class="mono">side_a_pair_id <span class="tag fk">FK→Pair</span> <span class="tag new">NEW</span></td><td>甲方配對。雙打賽事之甲方配對識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string(13)</td><td>Pair.pair_id</td><td class="src-ref">自定義。<b>條件式必填</b>：discipline 為 MD／WD／XD（雙打）時必填，單打時應留空</td></tr>
+        <tr><td>11</td><td>Match</td><td class="mono">side_b_pair_id <span class="tag fk">FK→Pair</span> <span class="tag new">NEW</span></td><td>乙方配對。雙打賽事之乙方配對識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string(13)</td><td>Pair.pair_id</td><td class="src-ref">同上，條件式必填規則一致</td></tr>
+        <tr><td>12</td><td>Match</td><td class="mono">event_category <span class="tag new">NEW</span></td><td>參賽組別。本場比賽所屬之參賽組別</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-B05</td><td class="src-ref">自定義。與 Player.player_level（選手層級）為不同概念，不可混用——一位層級為 AMT 之選手仍可報名公開組。置於 Match 而非 Tournament，係因同一賽事下常同時進行多個組別；棒球端採同一套設計（成棒甲組／乙組）</td></tr>
+        <tr><td>13</td><td>Match</td><td class="mono">status <span class="tag new">NEW</span></td><td>比賽狀態。本場比賽之最終狀態</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-B06</td><td class="src-ref">自定義，比照棒球 Game.status 補齊跨運動一致性。本欄位亦為比分完整性驗證之前提：Walkover（未戰而勝）之比賽不會產生 Rally／Game 資料，若無本欄位，資料品質檢核將誤判為資料缺漏，導致回饋予資料源頭單位之品質報告失真</td></tr>
+        <tr><td>14</td><td>Match</td><td class="mono">start_time <span class="tag new">NEW</span></td><td>開賽時間。本場比賽實際開始時間</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>timestamp</td><td>ISO 8601 帶時區位移，預設 +08:00</td><td class="src-ref">自定義。時區規範詳 §1 適用範圍「時間與時區」</td></tr>
+        <tr><td>15</td><td>Match</td><td class="mono">duration_min <span class="tag new">NEW</span></td><td>對戰時長（分鐘）。本場比賽實際進行時長</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>0–300 分鐘</td><td class="src-ref">自定義。採獨立欄位而非由起訖時間推算，係因羽球中斷、暫停常見，實際時長與起訖差值不同。單位採分鐘：羽球單場多為 20–90 分鐘量級，秒級精度對賽事分析無實益；若感測端原生輸出為秒值，應於 ETL 階段換算後寫入，原始秒值保留於 Raw 層 單位：分鐘（min），命名後綴已標註單位</td></tr>
+        <tr><td>16</td><td>Match</td><td class="mono">games_won_a</td><td>甲方局數。甲方（或甲配對）獲勝局數</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>integer</td><td>0–2</td><td class="src-ref">BWF Laws of Badminton, Law 7（三局兩勝制）。<b>條件式必填</b>：status 為 FINISHED／RETIRED（已實際開打）時必填；WALKOVER（未戰而勝）／DISQUALIFICATION（取消資格）等未實際完賽之情形得留空。原設為必填，惟賽前退賽之比賽不產生局數資料，與 status 欄位（CL-B06）相牴觸，本版改為條件式必填並與之連動</td></tr>
+        <tr><td>17</td><td>Match</td><td class="mono">games_won_b</td><td>乙方局數。乙方（或乙配對）獲勝局數</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>integer</td><td>0–2</td><td class="src-ref">同上，Law 7。<b>條件式必填</b>：規則與 games_won_a 一致，依 status 決定是否必填</td></tr>
+        <tr><td>18</td><td>Match</td><td class="mono">winner_side</td><td>勝方。本場比賽最終獲勝之一方</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>A / B</td><td class="src-ref">BWF Laws of Badminton, Law 7</td></tr>
       </tbody>
     </table></div>
     </div>
@@ -4083,19 +4115,19 @@ erDiagram
 
   <div class="slabel">Review Response Tracking · 累積式追蹤 · 每輪持續新增</div>
   <div class="stitle">意見回覆追蹤</div>
-  <div class="sdesc">本表逐項記錄國家運動科學中心提出之檢視意見，及本團隊對各項意見之處理決定、實作版本與具體說明。本表為<b>累積式</b>——後續各輪意見將持續追加，不覆寫既有紀錄，以完整保留雙方往復討論之軌跡。<br>凡標示為「部分依建議辦理」「待雙方討論」「待貴中心決策」者，均於「我方說明」欄載明理由或待決事項，供後續會議討論。<br><span style="color:var(--text-4)">收錄輪次：第一輪　2026-08-21　國家運動科學中心《資料字典初版檢視意見》　共 33 項</span></div>
+  <div class="sdesc">本表逐項記錄國家運動科學中心提出之檢視意見，及本團隊對各項意見之處理決定、實作版本與具體說明。本表為<b>累積式</b>——後續各輪意見將持續追加，不覆寫既有紀錄，以完整保留雙方往復討論之軌跡。<br>凡標示為「部分依建議辦理」「待雙方討論」「待貴中心決策」者，均於「我方說明」欄載明理由或待決事項，供後續會議討論。<br><span style="color:var(--text-4)">收錄輪次：第一輪　2026-08-21　國家運動科學中心《資料字典初版檢視意見》　共 33 項；第二輪　2026-08-28　國家運動科學中心第二輪意見（羽球部分）　共 2 項</span></div>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px">
-    <div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">意見總數</div><div style="font-size:22px;font-weight:600">33</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">依建議辦理</div><div style="font-size:22px;font-weight:600;color:#238551">30</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">部分依建議辦理</div><div style="font-size:22px;font-weight:600;color:#C87619">1</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">部分辦理·待貴中心決策</div><div style="font-size:22px;font-weight:600;color:#C87619">1</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">待貴中心決策</div><div style="font-size:22px;font-weight:600;color:#738091">1</div></div>
+    <div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">意見總數</div><div style="font-size:22px;font-weight:600">35</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">依建議辦理</div><div style="font-size:22px;font-weight:600;color:#238551">32</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">部分依建議辦理</div><div style="font-size:22px;font-weight:600;color:#C87619">1</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">部分辦理·待貴中心決策</div><div style="font-size:22px;font-weight:600;color:#C87619">1</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">待貴中心決策</div><div style="font-size:22px;font-weight:600;color:#738091">1</div></div>
   </div>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:var(--bg-1);border:1px solid var(--line-2);border-radius:2px">
     <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase">篩選</span>
-    <select id="rv-round" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部輪次</option><option value="R1">第一輪（2026-08-21）</option></select>
+    <select id="rv-round" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部輪次</option><option value="R1">第一輪（2026-08-21）</option><option value="R2">第二輪（2026-08-28）</option></select>
     <select id="rv-pri" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部優先級</option><option value="P0">P0</option><option value="P1">P1</option><option value="P2">P2</option></select>
     <select id="rv-sport" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部運動別</option><option value="棒球">棒球</option><option value="羽球">羽球</option><option value="跨運動">跨運動</option></select>
     <select id="rv-dec" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部處理決定</option><option value="依建議辦理">依建議辦理</option><option value="部分依建議辦理">部分依建議辦理</option><option value="部分辦理·待貴中心決策">部分辦理·待貴中心決策</option><option value="待貴中心決策">待貴中心決策</option></select>
-    <span style="margin-left:auto;font-size:11px;color:var(--text-3)">顯示 <b id="rv-count">33</b> / 33 項</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--text-3)">顯示 <b id="rv-count">35</b> / 35 項</span>
   </div>
 
   <div class="tw" style="border:1px solid var(--line-2)">
@@ -4434,6 +4466,26 @@ erDiagram
         <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
         <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.0-draft</td>
         <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理。§1 適用範圍新增「時間與時區」條款：所有日期與時間欄位以 ISO 8601 表示，timestamp 型別須帶時區位移，預設 +08:00（國家標準時間）；date 型別以國家標準時間之曆日為準。本項已與 B6、M5 連動一併處理。</td>
+      </tr>
+      <tr data-round="R2" data-pri="P1" data-dec="依建議辦理" data-sport="羽球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第二輪<br><span style="font-size:9px">2026-08-28</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R2-1</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #C87619;color:#C87619;border-radius:2px">P1</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">羽球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">考量賽前退賽，Match.games_won_a／games_won_b 是否改為條件式必填</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.2-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理。games_won_a／games_won_b 由必填改為條件式必填（C）：status 為 FINISHED／RETIRED（已實際開打）時必填；WALKOVER（未戰而勝）／DISQUALIFICATION（取消資格）等未實際完賽情形得留空，並與 status 代碼表（CL-B06）連動。本項確為原設計之內部矛盾——status 已含 WALKOVER 狀態、賽前退賽不產生局數，卻仍強制必填，感謝指正。另 winner_side（勝方）維持必填，因賽前退賽仍可判定勝方。</td>
+      </tr>
+      <tr data-round="R2" data-pri="P0" data-dec="依建議辦理" data-sport="羽球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第二輪<br><span style="font-size:9px">2026-08-28</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R2-2</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #CD4246;color:#CD4246;border-radius:2px">P0</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">羽球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">Venue.court_name 遇同一場館多面場地時，以相同 venue_id 記錄多筆將違反正規化</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.2-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理，本項確為正規化瑕疵，感謝指正。原將 court_name 置於 Venue，惟 Venue 以 venue_id 為主鍵，一場館僅能記錄一筆，多面場地無從表達。本版新增 Court（場地）實體（court_id 為 PK、venue_id 為 FK），以 Venue ‖—◇ Court 一對多關係表達一館多場；court_name 移入 Court，Venue 另移除 court_count（改由 Court 筆數計算）。Match 新增 court_id（FK→Court）指向實際使用之場地，單面場地之場館得留空。場地尺寸因屬 BWF 規則定值、各場地一致，仍留存於 Venue。ERD 同步更新，棒球端不受影響。</td>
       </tr>
       </tbody>
     </table>
