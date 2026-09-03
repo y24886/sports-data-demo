@@ -1341,7 +1341,7 @@ tr:hover td{background:var(--bg-1)}
 </div>
 
 <div class="sport-switch">
-  <button class="sport-btn active" onclick="switchSport('baseball')"> 棒球資料標準 v0.4.1</button>
+  <button class="sport-btn active" onclick="switchSport('baseball')"> 棒球資料標準 v0.4.3</button>
   <button class="sport-btn" onclick="switchSport('badminton')"> 羽球資料標準 v0.4.2</button>
   <button class="sport-btn" onclick="switchSport('review')">意見回覆追蹤</button>
 </div>
@@ -1491,6 +1491,12 @@ tr:hover td{background:var(--bg-1)}
         <div style="font-size:11px;color:var(--text-3)">2026-08-24</div>
         <div style="font-size:11.5px"><b>本團隊自主檢視發現之改進（非運科中心意見）</b>：因應本平台資料來源包含棒球教育訓練機構（如貝斯沛拉棒球學校、好的運動等民間訓練場域），原 Venue／Organization 實體以正式比賽球場與賽事型組織為預設之設計不敷適用，故新增：① Venue 新增 venue_type（場館類型：STADIUM／FIELD／TRAINING_CENTER／INDOOR_CAGE／SCHOOL／OTHER），surface_type 由必填改為條件式必填並擴充值域（增列 INDOOR_MAT／OTHER），使訓練場館毋須套用比賽球場之草皮分類；② Organization 新增 org_type（組織類型：LEAGUE／ASSOCIATION／TRAINING_INSTITUTION／SCHOOL／GOVERNMENT／OTHER），org_level（賽制層級）由必填改為條件式必填，使非賽制之訓練機構取得正確身分並得留空賽制層級。ERD 同步更新。</div>
       </div>
+      <div class="log-row">
+        <div class="log-time">v0.4.3-draft</div>
+        <div><span class="log-tag minor">MINOR</span></div>
+        <div style="font-size:11px;color:var(--text-3)">2026-09-03</div>
+        <div style="font-size:11.5px">依國家運動科學中心第三輪意見（棒球部分，共 9 項）調整：① <b>新增 Tournament（賽事）實體</b>——原將賽制層級（org_level）掛於 Organization，隱含「一組織僅辦單一層級賽事」之假設，惟棒協同時主辦成棒、青棒、少棒，單一值不敷表達；賽制層級移轉為 Tournament.tournament_level，Game 新增 tournament_id，並補齊與羽球端之跨運動結構對稱；② Team 新增 parent_team_id（自我參照），一、二軍採<b>各自獨立 team_id</b> 並以 league_level 標示軍別；③ Game 新增 gender_category（CL-015）、ball_type（CL-016）、bat_material（CL-017）；④ AthleteMetric、SwingMechanics 新增 session_id（FK→Session）；⑤ Pitch 新增 trajectory_ref（投球軌跡位址）；⑥ BiomechanicsFrame 新增 joint2d_ref、joint_hierarchy_ref、forward_axis、up_axis（座標系方向宣告，為跨系統正確解讀骨架之必要條件）；⑦ 代碼表調整：CL-002 增列明星賽、CL-004 中文俗稱修正（Cutter→卡特球、Sinker→伸卡球）、CL-006 LIVE_AB 更名為 LIVE_BP；⑧ 併同處理前輪擱置事項：AtBat.pitcher_id 改為條件式必填、Pitch 新增 pitch_source（CL-018），以因應民眾對發球機打擊之訓練情境。ERD 同步更新，羽球端不受影響。</div>
+      </div>
     </div>
   </div>
 
@@ -1525,6 +1531,11 @@ erDiagram
     PITCH ||--o{ BIOMECHANICSFRAME : "captured in"
     PLAYER ||--o{ BIOMECHANICSFRAME : "subject of"
     ORGANIZATION ||--o{ GAME : hosts
+    ORGANIZATION ||--o{ TOURNAMENT : organizes
+    TOURNAMENT ||--o{ GAME : contains
+    TEAM ||--o{ TEAM : "parent of"
+    SESSION ||--o{ ATHLETEMETRIC : "measured in"
+    SESSION ||--o{ SWINGMECHANICS : "measured in"
     ATBAT ||--o{ FIELDINGPLAY : contains
     ATBAT ||--o{ BASERUNNINGEVENT : contains
     PLAYER ||--o{ BASERUNNINGEVENT : runner
@@ -1559,10 +1570,20 @@ erDiagram
     TEAM {
         string team_id PK
         string org_id FK
+        string parent_team_id FK
         string team_full_name
         string team_abbr
         string league_level
         string home_venue_id FK
+    }
+    TOURNAMENT {
+        string tournament_id PK
+        string tournament_name
+        string host_org_id FK
+        string tournament_level
+        int season_year
+        date start_date
+        date end_date
     }
     PLAYER {
         string player_id PK
@@ -1590,36 +1611,35 @@ erDiagram
     ATHLETEMETRIC {
         string metric_id PK
         string player_id FK
+        string session_id FK
         date metric_date
         string context
         decimal sprint_speed_mps
         decimal arm_strength_kmh
-        decimal pop_time_sec
-        decimal steal_reaction_sec
         decimal cmj_height_cm
     }
     SWINGMECHANICS {
         string swing_id PK
         string player_id FK
+        string session_id FK
         string provider_id FK
         datetime measured_at
         decimal bat_speed_kmh
         int plane_score
-        int connection_score
     }
     GAME {
         string game_id PK
+        string tournament_id FK
         string venue_id FK
         string org_id FK
         string home_team_id FK
         string away_team_id FK
-        string competition_level
         string event_category
+        string gender_category
+        string ball_type
+        string bat_material
         string status
         timestamp game_start_time
-        timestamp game_end_time
-        int home_score
-        int away_score
         string consent_batch_ref
     }
     SESSION {
@@ -1653,9 +1673,9 @@ erDiagram
         decimal total_vert_break_cm
         decimal spray_angle_deg
         decimal bat_speed_kmh
-        boolean is_barrel
         boolean is_bunt_attempt
-        decimal wpa
+        string pitch_source
+        string trajectory_ref
         string video_ref
     }
     BIOMECHANICSFRAME {
@@ -1665,7 +1685,10 @@ erDiagram
         string subject_player_id FK
         int capture_fps
         string joint3d_ref
-        string bat_trace_ref
+        string joint2d_ref
+        string joint_hierarchy_ref
+        string forward_axis
+        string up_axis
     }
     FIELDINGPLAY {
         string fielding_id PK
@@ -1713,7 +1736,7 @@ erDiagram
         <tr><td>1</td><td>Organization</td><td class="mono">org_id <span class="tag pk">PK</span></td><td>組織識別碼。臺灣運動數據平台組織唯一識別符</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(11)</td><td>TW-BSB-O-{4碼}</td><td class="src-ref">自定義。格式設計參照 MLBAM team_id 規範</td></tr>
         <tr><td>2</td><td>Organization</td><td class="mono">org_name</td><td>組織名稱。協會或聯盟正式中文名稱</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(60)</td><td>—</td><td class="src-ref">自定義</td></tr>
         <tr><td>3</td><td>Organization</td><td class="mono">org_type <span class="tag new" style="margin-left:4px">NEW</span></td><td>組織類型。本組織之性質分類</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>LEAGUE / ASSOCIATION / TRAINING_INSTITUTION / SCHOOL / GOVERNMENT / OTHER</td><td class="src-ref">自定義。原 Organization 以賽事主辦之協會／聯盟為預設（org_level 稱「賽制層級」），惟本平台資料來源包含民間棒球教育訓練機構（如貝斯沛拉棒球學校、好的運動等）及學校，其非賽制組織、無所屬賽制層級。本欄位使此類機構取得正確身分，並作為 org_level 條件式必填之判斷依據</td></tr>
-        <tr><td>4</td><td>Organization</td><td class="mono">org_level</td><td>賽制層級。組織所屬棒球賽制層級（適用於賽事型組織）</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-001</td><td class="src-ref">WBSC Official Rules 2025-2026 賽制分類。<b>條件式必填</b>：org_type 為 LEAGUE／ASSOCIATION（賽事型組織）時必填；訓練機構、教育事業體等非賽事型組織得留空。原設為必填，惟本平台資料來源包含民間棒球教育訓練機構，其不隸屬任何賽制層級，本版改為條件式必填</td></tr>
+        <tr><td>4</td><td>Organization</td><td class="mono">org_level</td><td>賽制層級。組織所屬棒球賽制層級（適用於賽事型組織）</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-001</td><td class="src-ref">WBSC Official Rules 2025-2026 賽制分類。<b>條件式必填</b>：org_type 為 LEAGUE／ASSOCIATION（賽事型組織）時必填；訓練機構、教育事業體等非賽事型組織得留空。<b>v0.4.3 語意調整</b>：賽制層級本即賽事之屬性，同一組織（如中華民國棒球協會）常同時主辦成棒、青棒、少棒等多層級賽事，單一 org_level 不敷表達，故已新增 Tournament 實體並以 Tournament.tournament_level 記錄各賽事之層級。本欄位保留為<b>組織自身之主要層級</b>（供組織列表篩選、既有系統相容使用），<b>賽事層級之權威來源為 Tournament.tournament_level</b>，二者語意分工，不得混用</td></tr>
         <tr><td>5</td><td>Organization</td><td class="mono">sport_code</td><td>運動代碼。固定為 BSB（Baseball/Softball）</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(3)</td><td>BSB</td><td class="src-ref">國際奧會 Olympic Data Feed（ODF）Common Codes｜Sport Codes 官方三碼。BSB 為棒壘球（Baseball/Softball）合併碼，因 IOC 將二者列為同一運動項目下之分項；本案僅涵蓋棒球，不涵蓋壘球，此為採用 IOC 官方代碼之已知語意落差，於此誠實註明，不另行更動代碼本身。</td></tr>
         <tr><td>6</td><td>Organization</td><td class="mono">country_code</td><td>國家代碼。組織所屬國家代碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(2)</td><td>ISO 3166-1 Alpha-2（TW）</td><td class="src-ref">ISO 3166-1 國際標準。TWN 對應臺灣，但 API 使用 Alpha-2 (TW) 形式</td></tr>
       </tbody>
@@ -1837,7 +1860,7 @@ erDiagram
 
   <!-- Team -->
   <div class="dict-ent">
-    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Team（球隊）</span><span class="dict-cnt">7 欄</span></div>
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Team（球隊）</span><span class="dict-cnt">8 欄</span></div>
     <div class="dict-body">
     <div class="tw"><table>
       <thead><tr><th>項次</th><th>類別</th><th>屬性或關係</th><th>說明</th><th>選填<br>條件</th><th>最多<br>發生次數</th><th>資料型別</th><th>值域</th><th>附註</th></tr></thead>
@@ -1846,9 +1869,33 @@ erDiagram
         <tr><td>2</td><td>Team</td><td class="mono">org_id <span class="tag fk">FK→Organization</span></td><td>所屬組織。球隊隸屬的聯盟或協會</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Organization.org_id</td><td class="src-ref">自定義關聯</td></tr>
         <tr><td>3</td><td>Team</td><td class="mono">team_full_name</td><td>球隊全名。球隊正式中文全名</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(50)</td><td>—</td><td class="src-ref">參照 MLBAM Stats API teamName 欄位定義</td></tr>
         <tr><td>4</td><td>Team</td><td class="mono">team_abbr</td><td>縮寫。球隊英文縮寫（最多4碼大寫）</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(4)</td><td>大寫英文字母</td><td class="src-ref">參照 MLBAM Stats API abbreviation 欄位；如 UNI、RBB、CPBL</td></tr>
-        <tr><td>5</td><td>Team</td><td class="mono">league_level</td><td>聯賽層級。球隊參與聯賽的職業/業餘層級</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>PRO（職業）/ AMT（業餘）/ SOC（社會甲）</td><td class="src-ref">自定義。MLBAM 有 sport/league 分層但不適用臺灣體制</td></tr>
-        <tr><td>6</td><td>Team</td><td class="mono">home_venue_id <span class="tag fk">FK→Venue</span></td><td>主場場館。球隊主要主場場館識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Venue.venue_id</td><td class="src-ref">參照 MLBAM Stats API venue 關聯</td></tr>
-        <tr><td>7</td><td>Team</td><td class="mono">external_team_ref <span class="tag new" style="margin-left:4px">NEW</span></td><td>外部系統球隊對照碼。對應聯盟官方資料庫之球隊識別碼，供跨系統資料對接使用</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(40)</td><td>—</td><td class="src-ref">自定義，因應《棒球-1》HomeTeamForeignID／AwayTeamForeignID 欄位需求新增</td></tr>
+        <tr><td>5</td><td>Team</td><td class="mono">league_level</td><td>聯賽層級。球隊參與聯賽的職業/業餘層級</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>PRO（職業）/ AMT（業餘）/ SOC（社會甲）</td><td class="src-ref">自定義。<b>v0.4.3 補充</b>：職業球團之一軍、二軍依本標準<b>各自建立獨立 team_id</b>，並以本欄位標示其層級（如 PRO_1ST 一軍／PRO_2ND 二軍），所屬母球團則以 parent_team_id 表達。採獨立 team_id 而非於單一 team_id 附加識別屬性，係因一、二軍之球員名單（Roster）、出賽紀錄（Game）、主場（home_venue_id）與戰績均各自獨立，若共用同一 team_id，將導致 Roster 與 Game 之關聯無從區分所屬軍別，形成資料混淆</td></tr>
+        <tr><td>6</td><td>Team</td><td class="mono">parent_team_id <span class="tag fk">FK→Team</span> <span class="tag new">NEW</span></td><td>所屬母球團。本隊所隸屬之母球團識別碼（二軍等附屬隊伍適用）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(13)</td><td>Team.team_id</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。本欄位為 Team 實體之<b>自我參照關聯</b>，用以表達一、二軍之隸屬關係：二軍隊伍填列其母球團（一軍）之 team_id，一軍或無附屬關係之球隊則留空。採此設計後，「查詢某球團所有軍別」得以本欄位遞迴取得，毋須另建球團上位實體</td></tr>
+        <tr><td>7</td><td>Team</td><td class="mono">home_venue_id <span class="tag fk">FK→Venue</span></td><td>主場場館。球隊主要主場場館識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Venue.venue_id</td><td class="src-ref">參照 MLBAM Stats API venue 關聯</td></tr>
+        <tr><td>8</td><td>Team</td><td class="mono">external_team_ref <span class="tag new" style="margin-left:4px">NEW</span></td><td>外部系統球隊對照碼。對應聯盟官方資料庫之球隊識別碼，供跨系統資料對接使用</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(40)</td><td>—</td><td class="src-ref">自定義，因應《棒球-1》HomeTeamForeignID／AwayTeamForeignID 欄位需求新增</td></tr>
+      </tbody>
+    </table></div>
+    </div>
+  </div>
+
+  <!-- Tournament -->
+  <div class="dict-ent">
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Tournament（賽事）<span class="tag new" style="margin-left:8px">NEW</span></span><span class="dict-cnt">8 欄</span></div>
+    <div class="dict-body">
+    <div style="padding:8px 12px;font-size:10.5px;color:var(--text-3);background:var(--bg-1);border-left:2px solid var(--accent)">
+      設計說明：本實體因應運科中心第三輪意見新增，並補齊與羽球端 Tournament 之跨運動結構對稱。原設計將賽制層級（org_level）掛於 Organization，隱含「一個組織僅辦理單一層級賽事」之假設；惟中華民國棒球協會等單位同時主辦成棒、青棒、少棒等多層級賽事，單一 org_level 不敷表達。本實體將「賽事」自「組織」獨立，賽制層級改記於賽事層級，Organization 僅保留其自身屬性，並以 host_org_id 表達主辦關係。
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>項次</th><th>類別</th><th>屬性或關係</th><th>說明</th><th>選填<br>條件</th><th>最多<br>發生次數</th><th>資料型別</th><th>值域</th><th>附註</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Tournament</td><td class="mono">tournament_id <span class="tag pk">PK</span></td><td>賽事識別碼。單一賽事之唯一識別符</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(13)</td><td>TW-BSB-TN-{4碼}</td><td class="src-ref">自定義。格式與羽球 Tournament 對稱（TW-BDM-TN-…）</td></tr>
+        <tr><td>2</td><td>Tournament</td><td class="mono">tournament_name</td><td>賽事名稱。賽事正式全稱</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(60)</td><td>—</td><td class="src-ref">自定義</td></tr>
+        <tr><td>3</td><td>Tournament</td><td class="mono">host_org_id <span class="tag fk">FK→Organization</span></td><td>主辦單位。本賽事之主辦或管理組織</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(11)</td><td>Organization.org_id</td><td class="src-ref">自定義。採 FK 關聯而非自由文字，避免同一協會於不同賽事出現多種寫法；一個組織得主辦多項不同層級之賽事，此即本實體新增之主因</td></tr>
+        <tr><td>4</td><td>Tournament</td><td class="mono">tournament_level</td><td>賽制層級。本賽事所屬之棒球賽制層級</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-001</td><td class="src-ref">WBSC Official Rules 2025-2026 賽制分類。<b>本欄位為 Organization.org_level 之語意移轉</b>：賽制層級本即賽事之屬性而非組織之屬性，改記於此後，同一組織得同時主辦成棒、青棒、少棒等不同層級賽事</td></tr>
+        <tr><td>5</td><td>Tournament</td><td class="mono">season_year</td><td>賽季年度。本賽事所屬之賽季或年度</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>西元年（如 2026）</td><td class="src-ref">自定義。供跨年度統計與同名賽事之年度區分使用</td></tr>
+        <tr><td>6</td><td>Tournament</td><td class="mono">start_date</td><td>賽事起始日期。本賽事開始日期</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>date</td><td>ISO 8601（YYYY-MM-DD）</td><td class="src-ref">自定義，與羽球 Tournament 對稱</td></tr>
+        <tr><td>7</td><td>Tournament</td><td class="mono">end_date</td><td>賽事結束日期。本賽事結束日期</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>date</td><td>ISO 8601（YYYY-MM-DD）</td><td class="src-ref">自定義，與羽球 Tournament 對稱</td></tr>
+        <tr><td>8</td><td>Tournament</td><td class="mono">event_category</td><td>參賽組別。本賽事之預設參賽組別</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-014</td><td class="src-ref">自定義。賽事層級之預設組別；個別場次如有不同組別，仍以 Game.event_category 為準</td></tr>
       </tbody>
     </table></div>
     </div>
@@ -1904,7 +1951,7 @@ erDiagram
 
   <!-- AthleteMetric -->
   <div class="dict-ent">
-    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">AthleteMetric（體能量測）<span class="tag new" style="margin-left:8px">NEW</span></span><span class="dict-cnt">16 欄</span></div>
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">AthleteMetric（體能量測）<span class="tag new" style="margin-left:8px">NEW</span></span><span class="dict-cnt">17 欄</span></div>
     <div class="dict-body">
     <div class="tw"><table>
       <thead><tr><th>項次</th><th>類別</th><th>屬性或關係</th><th>說明</th><th>選填<br>條件</th><th>最多<br>發生次數</th><th>資料型別</th><th>值域</th><th>附註</th></tr></thead>
@@ -1925,6 +1972,7 @@ erDiagram
         <tr><td>14</td><td>AthleteMetric</td><td class="mono">cmj_height_cm / cmj_power_w / cmj_mrsi <span class="tag new" style="margin-left:4px">NEW</span></td><td>反向跳（CMJ）跳躍高度、功率、修正式反應肌力</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal</td><td>cm / W / —</td><td class="src-ref">自定義，因應《棒球-2》Hawkin Dynamics 模組 CmjJumpHeight／CmjJumpPower／CmjMrsi 欄位需求新增，屬下肢爆發力力板測試</td></tr>
         <tr><td>15</td><td>AthleteMetric</td><td class="mono">sj_height_cm / sj_power_w / sj_eur <span class="tag new" style="margin-left:4px">NEW</span></td><td>蹲踞跳（SJ）跳躍高度、功率、離心使用率比例</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal</td><td>cm / W / —</td><td class="src-ref">自定義，因應《棒球-2》Hawkin Dynamics 模組 SjJumpHeight／SjJumpPower／SjEur 欄位需求新增</td></tr>
         <tr><td>16</td><td>AthleteMetric</td><td class="mono">dj_rsi / dj_contact_time_sec <span class="tag new" style="margin-left:4px">NEW</span></td><td>落下跳（DJ）反應肌力指數與觸地時間</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal</td><td>— / 秒</td><td class="src-ref">自定義，因應《棒球-2》Hawkin Dynamics 模組 DjRsi／DjContactTime 欄位需求新增</td></tr>
+        <tr><td>17</td><td>AthleteMetric</td><td class="mono">session_id <span class="tag fk">FK→Session</span> <span class="tag new">NEW</span></td><td>所屬訓練課次。本筆量測所屬之訓練課次識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(15)</td><td>Session.session_id</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。既有 context 欄位已含 SESSION 值，惟無對應外鍵可連結至實際課次，致訓練情境之量測無從追溯課表、場地與訓練內容，本版補正。本欄位為選填，非訓練情境之量測得留空</td></tr>
       </tbody>
     </table></div>
     </div>
@@ -1932,7 +1980,7 @@ erDiagram
 
   <!-- SwingMechanics -->
   <div class="dict-ent">
-    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">SwingMechanics（打擊機制量測）<span class="tag new" style="margin-left:8px">NEW</span></span><span class="dict-cnt">14 欄</span></div>
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">SwingMechanics（打擊機制量測）<span class="tag new" style="margin-left:8px">NEW</span></span><span class="dict-cnt">15 欄</span></div>
     <div class="dict-body">
     <div style="padding:8px 12px;font-size:10.5px;color:var(--text-3);background:var(--bg-1);border-left:2px solid var(--accent)">
       設計說明：因應《棒球-2》Blast Motion 模組（揮棒感測器）新增。欄位數量多達 17 項且語意自成一組（訓練分析用途，非逐球比賽資料），獨立為新實體而非塞入 AthleteMetric，避免該實體過度龐雜；與 Pitch 之 bat_speed／swing_length（逐球量測）為互補而非重複——本實體為訓練場域之獨立揮棒品質評分，Pitch 之對應欄位為比賽或訓練逐次擊球之量測值。
@@ -1954,6 +2002,7 @@ erDiagram
         <tr><td>12</td><td>SwingMechanics</td><td class="mono">early_connection_deg / connection_at_impact_deg</td><td>起始連結角／擊球瞬間連結角</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(5,1)</td><td>°</td><td class="src-ref">自定義，因應 Blast Motion Early Connection／Connection at Impact 欄位需求新增</td></tr>
         <tr><td>13</td><td>SwingMechanics</td><td class="mono">vertical_bat_angle_deg</td><td>球棒垂直角</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(5,1)</td><td>°</td><td class="src-ref">自定義，因應 Blast Motion Vertical Bat Angle 欄位需求新增</td></tr>
         <tr><td>14</td><td>SwingMechanics</td><td class="mono">swing_length_m / swing_path_deg</td><td>揮棒距離（m）／揮棒路徑角</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal</td><td>0–3.0 m / °</td><td class="src-ref">自定義，因應 Blast Motion SwingLength(OnPlaneEfficiency)／SwingPath(AttackAngle) 欄位需求新增</td></tr>
+        <tr><td>15</td><td>SwingMechanics</td><td class="mono">session_id <span class="tag fk">FK→Session</span> <span class="tag new">NEW</span></td><td>所屬訓練課次。本筆量測所屬之訓練課次識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(15)</td><td>Session.session_id</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。揮棒量測多於訓練課次中進行，本欄位使其得連結至實際課次以補充訓練脈絡；比賽情境之揮棒量測則留空，改由 Pitch 之關聯取得脈絡。本欄位為選填，非訓練情境之量測得留空</td></tr>
       </tbody>
     </table></div>
     </div>
@@ -1961,7 +2010,7 @@ erDiagram
 
   <!-- BiomechanicsFrame -->
   <div class="dict-ent">
-    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">BiomechanicsFrame（生物力學影格）<span class="tag new" style="margin-left:8px">NEW</span></span><span class="dict-cnt">8 欄</span></div>
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">BiomechanicsFrame（生物力學影格）<span class="tag new" style="margin-left:8px">NEW</span></span><span class="dict-cnt">12 欄</span></div>
     <div class="dict-body">
     <div style="padding:8px 12px;font-size:10.5px;color:var(--text-3);background:var(--bg-1);border-left:2px solid var(--accent)">
       設計說明：因應《棒球-1》joint3d（關節3D座標時序，每秒100+筆採樣、17+關節）與 bat_trace（球棒揮擊全軌跡，每次揮擊30+座標點）需求新增。此類資料量極大，不適合以關聯式資料庫逐筆儲存，故本實體僅定義中介層 metadata，實際影格資料存放於物件儲存（Object Storage），本欄位以 URI 指向儲存位置。
@@ -1977,6 +2026,10 @@ erDiagram
         <tr><td>6</td><td>BiomechanicsFrame</td><td class="mono">bat_trace_ref</td><td>球棒揮擊全軌跡資料儲存位址</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(255)</td><td>URI（物件儲存路徑）</td><td class="src-ref">自定義，因應《棒球-1》bat_trace 欄位需求新增；與 joint3d_ref 性質相近（時序3D座標），一併規劃儲存架構</td></tr>
         <tr><td>7</td><td>BiomechanicsFrame</td><td class="mono">subject_role <span class="tag new">NEW</span></td><td>擷取主體角色。本筆生物力學資料所擷取之對象角色</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>PITCHER／BATTER／CATCHER／FIELDER／RUNNER</td><td class="src-ref">自定義。同一 pitch_id 下常同時擷取投手與打者兩組骨架資料，ERD 既有之 PITCH ||--o{ BIOMECHANICSFRAME 一對多關係本即可容納多筆，所缺者為「本筆係何人」之標示，故新增本欄位並存為多筆。<b>設計取捨說明</b>：未採 pitcher_joint3d_ref／batter_joint3d_ref 之雙欄位作法，係因該作法於未來納入捕手或守備員動作捕捉時必須再次變更結構，屬破壞性變更；本設計可直接擴充 enum 值域</td></tr>
         <tr><td>8</td><td>BiomechanicsFrame</td><td class="mono">subject_player_id <span class="tag fk">FK→Player</span> <span class="tag new">NEW</span></td><td>擷取主體。本筆生物力學資料所擷取之球員識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id</td><td class="src-ref">自定義，與 subject_role 併同標示本筆資料之歸屬對象</td></tr>
+        <tr><td>9</td><td>BiomechanicsFrame</td><td class="mono">joint2d_ref <span class="tag new">NEW</span></td><td>關節2D座標時序資料儲存位址。本筆資料對應主體之 2D 關節座標序列</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(255)</td><td>URI（物件儲存路徑）</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。2D 關節座標為建構 3D 骨架之必備中間資料，保留 2D 資料方可供後續重建演算法更新時重新推算 3D 骨架，或供 2D 影像疊合檢視；若僅保存 3D 結果，原始推算依據將無從回溯</td></tr>
+        <tr><td>10</td><td>BiomechanicsFrame</td><td class="mono">joint_hierarchy_ref <span class="tag new">NEW</span></td><td>關節階層定義儲存位址。本筆骨架之關節階層（hierarchy）定義檔位址</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(255)</td><td>URI（物件儲存路徑）</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。關節座標僅為數值陣列，須搭配關節階層定義（各關節之父子連接關係與索引順序）方能正確還原骨架結構；不同動作捕捉系統之關節數量與排序不一，缺此定義將無法跨系統解讀。本欄位同時適用於 2D 與 3D 骨架之階層定義</td></tr>
+        <tr><td>11</td><td>BiomechanicsFrame</td><td class="mono">forward_axis <span class="tag new">NEW</span></td><td>前方座標軸。本筆 3D 骨架資料中代表「向前」方向之座標軸</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>enum</td><td>+X／-X／+Y／-Y／+Z／-Z</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。<b>條件式必填</b>：填有 joint3d_ref 時必填。3D 骨架之座標系方向慣例因系統而異（如 Y-up 與 Z-up 之別），若未明確宣告，同一組座標於不同系統解讀將產生翻轉或朝向錯誤，是動作資料跨系統交換最常見之失效原因</td></tr>
+        <tr><td>12</td><td>BiomechanicsFrame</td><td class="mono">up_axis <span class="tag new">NEW</span></td><td>上方座標軸。本筆 3D 骨架資料中代表「向上」方向之座標軸</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>enum</td><td>+X／-X／+Y／-Y／+Z／-Z</td><td class="src-ref">自定義，同 forward_axis。<b>條件式必填</b>：填有 joint3d_ref 時必填。二軸共同界定座標系之朝向</td></tr>
       </tbody>
     </table></div>
     </div>
@@ -1984,7 +2037,7 @@ erDiagram
 
   <!-- Game -->
   <div class="dict-ent">
-    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Game（比賽）</span><span class="dict-cnt">27 欄</span></div>
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Game（比賽）</span><span class="dict-cnt">31 欄</span></div>
     <div class="dict-body">
     <div class="tw"><table>
       <thead><tr><th>項次</th><th>類別</th><th>屬性或關係</th><th>說明</th><th>選填<br>條件</th><th>最多<br>發生次數</th><th>資料型別</th><th>值域</th><th>附註</th></tr></thead>
@@ -1992,30 +2045,34 @@ erDiagram
         <tr><td>1</td><td>Game</td><td class="mono">game_id <span class="tag pk">PK</span></td><td>比賽識別碼。比賽唯一識別符</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(25)</td><td>TW-BSB-G-{YYYYMMDD}-{序號}</td><td class="src-ref">自定義。可對映 MLBAM GUMBO 的 gamePk 欄位</td></tr>
         <tr><td>2</td><td>Game</td><td class="mono">game_date</td><td>比賽日期。比賽舉行日期</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>date</td><td>ISO 8601</td><td class="src-ref">ISO 8601。MLBAM GUMBO gameData.datetime.officialDate</td></tr>
         <tr><td>3</td><td>Game</td><td class="mono">game_type</td><td>比賽類型。比賽的賽事類型代碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-002</td><td class="src-ref">MLBAM GUMBO gameData.game.type。本版增加 I/W 以涵蓋臺灣業餘賽制</td></tr>
-        <tr><td>4</td><td>Game</td><td class="mono">competition_level</td><td>賽事層級。比賽所屬賽制層級</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-001</td><td class="src-ref">WBSC Official Rules 2025-2026 賽制分類</td></tr>
-        <tr><td>5</td><td>Game</td><td class="mono">home_team_id <span class="tag fk">FK→Team</span></td><td>主隊。主隊球隊識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Team.team_id</td><td class="src-ref">MLBAM GUMBO gameData.teams.home.id</td></tr>
-        <tr><td>6</td><td>Game</td><td class="mono">away_team_id <span class="tag fk">FK→Team</span></td><td>客隊。客隊球隊識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Team.team_id</td><td class="src-ref">MLBAM GUMBO gameData.teams.away.id</td></tr>
-        <tr><td>7</td><td>Game</td><td class="mono">venue_id <span class="tag fk">FK→Venue</span></td><td>比賽場地。比賽舉行場館識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Venue.venue_id</td><td class="src-ref">MLBAM GUMBO gameData.venue.id</td></tr>
-        <tr><td>8</td><td>Game</td><td class="mono">umpire_hp_id</td><td>主審識別碼。本場比賽主審球員識別碼。主審影響好壞球判定，是 Catcher Framing 分析的必要欄位</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id 或外部 ID</td><td class="src-ref">MLBAM GUMBO liveData.boxscore.officials（umpires 陣列）。WBSC Umpire Appointment & Evaluation Framework</td></tr>
-        <tr><td>9</td><td>Game</td><td class="mono">status</td><td>比賽狀態。比賽目前進行狀態</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-010</td><td class="src-ref">MLBAM GUMBO gameData.status.abstractGameState</td></tr>
-        <tr><td>10</td><td>Game</td><td class="mono">home_score</td><td>主隊得分。比賽最終主隊總得分</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">MLBAM GUMBO liveData.linescore.teams.home.runs</td></tr>
-        <tr><td>11</td><td>Game</td><td class="mono">away_score</td><td>客隊得分。比賽最終客隊總得分</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">MLBAM GUMBO liveData.linescore.teams.away.runs</td></tr>
-        <tr><td>12</td><td>Game</td><td class="mono">innings_played</td><td>完成局數。比賽正式完成的局數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>1–15</td><td class="src-ref">WBSC Rule 7.10（局數及縮短賽規則）。MLBAM GUMBO liveData.linescore.currentInning</td></tr>
-        <tr><td>13</td><td>Game</td><td class="mono">pitch_count_limit</td><td>投球數上限。本場比賽適用的投球數限制（依賽制層級）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>U-12:75 / U-15:85 / U-18:100 / 成人:依規定</td><td class="src-ref">WBSC Official Rules 2025-2026, Rule 4.04（投球局數與球數限制）</td></tr>
-        <tr><td>14</td><td>Game</td><td class="mono">weather_temp_c</td><td>氣溫（℃）。開賽時場地氣溫（攝氏）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(4,1)</td><td>-10.0–50.0 °C</td><td class="src-ref">自定義。MLBAM 記錄為華氏（temperature），本版改為攝氏 單位：攝氏度（°C），已標註於欄位名稱後綴。</td></tr>
-        <tr><td>15</td><td>Game</td><td class="mono">external_game_ref <span class="tag new" style="margin-left:4px">NEW</span></td><td>外部系統比賽對照碼。對應聯盟官方資料庫（如中華職棒）之比賽識別碼，供跨系統資料對接使用</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(40)</td><td>—</td><td class="src-ref">自定義，因應《棒球-1》GameForeignID 欄位需求新增</td></tr>
-        <tr><td>16</td><td>Game</td><td class="mono">home_hits <span class="tag new" style="margin-left:4px">NEW</span></td><td>主隊安打數。比賽最終主隊總安打數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">自定義，因應《棒球-1》Home_H 欄位需求新增</td></tr>
-        <tr><td>17</td><td>Game</td><td class="mono">away_hits <span class="tag new" style="margin-left:4px">NEW</span></td><td>客隊安打數。比賽最終客隊總安打數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">自定義，因應《棒球-1》Away_H 欄位需求新增</td></tr>
-        <tr><td>18</td><td>Game</td><td class="mono">home_errors <span class="tag new" style="margin-left:4px">NEW</span></td><td>主隊失誤數。比賽最終主隊總失誤數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">自定義，因應《棒球-1》Home_E 欄位需求新增</td></tr>
-        <tr><td>19</td><td>Game</td><td class="mono">away_errors <span class="tag new" style="margin-left:4px">NEW</span></td><td>客隊失誤數。比賽最終客隊總失誤數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">自定義，因應《棒球-1》Away_E 欄位需求新增</td></tr>
-        <tr><td>20</td><td>Game</td><td class="mono">umpire_1b_id <span class="tag new" style="margin-left:4px">NEW</span></td><td>一壘審識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id 或外部 ID</td><td class="src-ref">自定義，因應《棒球-1》HeadUmpire／1B／2B／3B／L／R 欄位需求新增；因非所有層級賽事皆配置完整裁判組，故設為選填</td></tr>
-        <tr><td>21</td><td>Game</td><td class="mono">umpire_2b_id <span class="tag new" style="margin-left:4px">NEW</span></td><td>二壘審識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id 或外部 ID</td><td class="src-ref">自定義，同上</td></tr>
-        <tr><td>22</td><td>Game</td><td class="mono">umpire_3b_id <span class="tag new" style="margin-left:4px">NEW</span></td><td>三壘審識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id 或外部 ID</td><td class="src-ref">自定義，同上</td></tr>
-        <tr><td>23</td><td>Game</td><td class="mono">game_start_time <span class="tag new">NEW</span></td><td>開賽時間。本場比賽實際開始時間</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>timestamp</td><td>ISO 8601 帶時區位移，預設 +08:00</td><td class="src-ref">自定義。既有 game_date 為 date 型別，無時間資訊；跨系統交換時若未明確宣告時區，為常見之隱性錯誤來源，故本欄位採帶時區位移之 timestamp，全域時區規範詳 §1 適用範圍「時間與時區」</td></tr>
-        <tr><td>24</td><td>Game</td><td class="mono">game_end_time <span class="tag new">NEW</span></td><td>完賽時間。本場比賽實際結束時間</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>timestamp</td><td>ISO 8601 帶時區位移，預設 +08:00</td><td class="src-ref">自定義，同上</td></tr>
-        <tr><td>25</td><td>Game</td><td class="mono">org_id <span class="tag fk">FK→Organization</span> <span class="tag new">NEW</span></td><td>主辦／登錄組織。本場比賽之主辦或登錄組織識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(11)</td><td>Organization.org_id</td><td class="src-ref">自定義。<b>語意界定</b>：本欄位指「主辦或登錄之組織」，非「球隊所屬組織」——跨聯盟交流賽時主客隊分屬不同組織，若 ETL 逕以 Team.org_id 回填將產生錯誤，故明確定義語意以避免誤用</td></tr>
-        <tr><td>26</td><td>Game</td><td class="mono">event_category <span class="tag new">NEW</span></td><td>參賽組別。本場比賽所屬之參賽組別（如成棒甲組、成棒乙組）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-014</td><td class="src-ref">自定義。與 Player.player_level（選手層級）為不同概念，不可混用；與羽球 Match.event_category 採同一套設計，維持兩運動一致</td></tr>
-        <tr><td>27</td><td>Game</td><td class="mono">consent_batch_ref <span class="tag new">NEW</span></td><td>授權批次對照。本場比賽資料所屬之知情同意授權批次識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(64)</td><td>知情同意授權平台產生之批次識別碼</td><td class="src-ref">自定義。本標準 §1 已載明同意蒐集流程不在規範範圍內，惟 ETL 於 Raw→Staging 階段仍須知悉每一批資料之授權狀態，方能決定可否進入 Mart 層對外服務；本欄位以<b>批次層級</b>保留回溯路徑（而非逐筆攜帶 is_consent 旗標），使授權狀態可回溯至知情同意授權平台，於發生違反授權情形時得以舉證受影響之資料範圍</td></tr>
+        <tr><td>4</td><td>Game</td><td class="mono">tournament_id <span class="tag fk">FK→Tournament</span> <span class="tag new">NEW</span></td><td>所屬賽事。本場比賽所屬之賽事識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(13)</td><td>Tournament.tournament_id</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。本欄位為取得賽事層級（tournament_level）、主辦單位（host_org_id）、賽季年度之路徑；正式賽事之場次應填列本欄位。<b>與 org_id 之分工</b>：隸屬於正式賽事之場次以本欄位為準，訓練賽、教育機構自辦等不隸屬任何賽事之場次則以 org_id 記錄其登錄組織，二者擇一填列即可</td></tr>
+        <tr><td>5</td><td>Game</td><td class="mono">competition_level</td><td>賽事層級。比賽所屬賽制層級</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-001</td><td class="src-ref">WBSC Official Rules 2025-2026 賽制分類</td></tr>
+        <tr><td>6</td><td>Game</td><td class="mono">home_team_id <span class="tag fk">FK→Team</span></td><td>主隊。主隊球隊識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Team.team_id</td><td class="src-ref">MLBAM GUMBO gameData.teams.home.id</td></tr>
+        <tr><td>7</td><td>Game</td><td class="mono">away_team_id <span class="tag fk">FK→Team</span></td><td>客隊。客隊球隊識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Team.team_id</td><td class="src-ref">MLBAM GUMBO gameData.teams.away.id</td></tr>
+        <tr><td>8</td><td>Game</td><td class="mono">venue_id <span class="tag fk">FK→Venue</span></td><td>比賽場地。比賽舉行場館識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Venue.venue_id</td><td class="src-ref">MLBAM GUMBO gameData.venue.id</td></tr>
+        <tr><td>9</td><td>Game</td><td class="mono">umpire_hp_id</td><td>主審識別碼。本場比賽主審球員識別碼。主審影響好壞球判定，是 Catcher Framing 分析的必要欄位</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id 或外部 ID</td><td class="src-ref">MLBAM GUMBO liveData.boxscore.officials（umpires 陣列）。WBSC Umpire Appointment & Evaluation Framework</td></tr>
+        <tr><td>10</td><td>Game</td><td class="mono">status</td><td>比賽狀態。比賽目前進行狀態</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-010</td><td class="src-ref">MLBAM GUMBO gameData.status.abstractGameState</td></tr>
+        <tr><td>11</td><td>Game</td><td class="mono">home_score</td><td>主隊得分。比賽最終主隊總得分</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">MLBAM GUMBO liveData.linescore.teams.home.runs</td></tr>
+        <tr><td>12</td><td>Game</td><td class="mono">away_score</td><td>客隊得分。比賽最終客隊總得分</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">MLBAM GUMBO liveData.linescore.teams.away.runs</td></tr>
+        <tr><td>13</td><td>Game</td><td class="mono">innings_played</td><td>完成局數。比賽正式完成的局數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>1–15</td><td class="src-ref">WBSC Rule 7.10（局數及縮短賽規則）。MLBAM GUMBO liveData.linescore.currentInning</td></tr>
+        <tr><td>14</td><td>Game</td><td class="mono">pitch_count_limit</td><td>投球數上限。本場比賽適用的投球數限制（依賽制層級）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>U-12:75 / U-15:85 / U-18:100 / 成人:依規定</td><td class="src-ref">WBSC Official Rules 2025-2026, Rule 4.04（投球局數與球數限制）</td></tr>
+        <tr><td>15</td><td>Game</td><td class="mono">weather_temp_c</td><td>氣溫（℃）。開賽時場地氣溫（攝氏）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(4,1)</td><td>-10.0–50.0 °C</td><td class="src-ref">自定義。MLBAM 記錄為華氏（temperature），本版改為攝氏 單位：攝氏度（°C），已標註於欄位名稱後綴。</td></tr>
+        <tr><td>16</td><td>Game</td><td class="mono">external_game_ref <span class="tag new" style="margin-left:4px">NEW</span></td><td>外部系統比賽對照碼。對應聯盟官方資料庫（如中華職棒）之比賽識別碼，供跨系統資料對接使用</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(40)</td><td>—</td><td class="src-ref">自定義，因應《棒球-1》GameForeignID 欄位需求新增</td></tr>
+        <tr><td>17</td><td>Game</td><td class="mono">home_hits <span class="tag new" style="margin-left:4px">NEW</span></td><td>主隊安打數。比賽最終主隊總安打數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">自定義，因應《棒球-1》Home_H 欄位需求新增</td></tr>
+        <tr><td>18</td><td>Game</td><td class="mono">away_hits <span class="tag new" style="margin-left:4px">NEW</span></td><td>客隊安打數。比賽最終客隊總安打數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">自定義，因應《棒球-1》Away_H 欄位需求新增</td></tr>
+        <tr><td>19</td><td>Game</td><td class="mono">home_errors <span class="tag new" style="margin-left:4px">NEW</span></td><td>主隊失誤數。比賽最終主隊總失誤數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">自定義，因應《棒球-1》Home_E 欄位需求新增</td></tr>
+        <tr><td>20</td><td>Game</td><td class="mono">away_errors <span class="tag new" style="margin-left:4px">NEW</span></td><td>客隊失誤數。比賽最終客隊總失誤數</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>≥ 0</td><td class="src-ref">自定義，因應《棒球-1》Away_E 欄位需求新增</td></tr>
+        <tr><td>21</td><td>Game</td><td class="mono">umpire_1b_id <span class="tag new" style="margin-left:4px">NEW</span></td><td>一壘審識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id 或外部 ID</td><td class="src-ref">自定義，因應《棒球-1》HeadUmpire／1B／2B／3B／L／R 欄位需求新增；因非所有層級賽事皆配置完整裁判組，故設為選填</td></tr>
+        <tr><td>22</td><td>Game</td><td class="mono">umpire_2b_id <span class="tag new" style="margin-left:4px">NEW</span></td><td>二壘審識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id 或外部 ID</td><td class="src-ref">自定義，同上</td></tr>
+        <tr><td>23</td><td>Game</td><td class="mono">umpire_3b_id <span class="tag new" style="margin-left:4px">NEW</span></td><td>三壘審識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id 或外部 ID</td><td class="src-ref">自定義，同上</td></tr>
+        <tr><td>24</td><td>Game</td><td class="mono">game_start_time <span class="tag new">NEW</span></td><td>開賽時間。本場比賽實際開始時間</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>timestamp</td><td>ISO 8601 帶時區位移，預設 +08:00</td><td class="src-ref">自定義。既有 game_date 為 date 型別，無時間資訊；跨系統交換時若未明確宣告時區，為常見之隱性錯誤來源，故本欄位採帶時區位移之 timestamp，全域時區規範詳 §1 適用範圍「時間與時區」</td></tr>
+        <tr><td>25</td><td>Game</td><td class="mono">game_end_time <span class="tag new">NEW</span></td><td>完賽時間。本場比賽實際結束時間</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>timestamp</td><td>ISO 8601 帶時區位移，預設 +08:00</td><td class="src-ref">自定義，同上</td></tr>
+        <tr><td>26</td><td>Game</td><td class="mono">org_id <span class="tag fk">FK→Organization</span> <span class="tag new">NEW</span></td><td>主辦／登錄組織。本場比賽之主辦或登錄組織識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(11)</td><td>Organization.org_id</td><td class="src-ref">自定義。<b>語意界定</b>：本欄位指「主辦或登錄之組織」，非「球隊所屬組織」——跨聯盟交流賽時主客隊分屬不同組織，若 ETL 逕以 Team.org_id 回填將產生錯誤。<b>v0.4.3 保留說明</b>：運科中心第三輪意見建議於新增 Tournament 實體後移除本欄位，經評估後<b>保留為選填</b>，理由有三：（一）<b>涵蓋非賽事場次</b>——訓練賽、教育訓練機構自辦活動、民眾自主練習等場次不隸屬任何正式賽事，無 tournament_id 可填，若移除本欄位將失去資料上傳單位之歸屬與追溯路徑，與本標準納入訓練情境之範圍相牴觸；（二）<b>移除欄位屬破壞性變更</b>——依本標準版本控管原則，欄位移除須列為 MAJOR 版本，於草案定版前不宜輕啟；（三）<b>二者語意分工而非重複</b>——tournament_id 表達「屬於哪一項賽事」，org_id 表達「由哪個組織登錄」，正式賽事填前者、非賽事場次填後者，不致產生資料矛盾。倘貴中心仍認為應予移除，敬請於定版前告知，本團隊將依示辦理</td></tr>
+        <tr><td>27</td><td>Game</td><td class="mono">event_category <span class="tag new">NEW</span></td><td>參賽組別。本場比賽所屬之參賽組別（如成棒甲組、成棒乙組）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-014</td><td class="src-ref">自定義。與 Player.player_level（選手層級）為不同概念，不可混用；與羽球 Match.event_category 採同一套設計，維持兩運動一致</td></tr>
+        <tr><td>28</td><td>Game</td><td class="mono">consent_batch_ref <span class="tag new">NEW</span></td><td>授權批次對照。本場比賽資料所屬之知情同意授權批次識別碼</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(64)</td><td>知情同意授權平台產生之批次識別碼</td><td class="src-ref">自定義。本標準 §1 已載明同意蒐集流程不在規範範圍內，惟 ETL 於 Raw→Staging 階段仍須知悉每一批資料之授權狀態，方能決定可否進入 Mart 層對外服務；本欄位以<b>批次層級</b>保留回溯路徑（而非逐筆攜帶 is_consent 旗標），使授權狀態可回溯至知情同意授權平台，於發生違反授權情形時得以舉證受影響之資料範圍</td></tr>
+        <tr><td>29</td><td>Game</td><td class="mono">gender_category <span class="tag new">NEW</span></td><td>競賽性別組別。本場比賽所屬之性別組別（如男子組、女子組、混合組）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-015</td><td class="src-ref">自定義，因應運科中心第三輪意見新增，設計精神參照羽球 Match.discipline。<b>與 Player.gender 之區別</b>：本欄位為<b>賽事組別</b>（賽會如何分組），Player.gender 為<b>選手個人生理性別</b>，二者不可混用——如黑豹旗全國高中棒球大賽設有女子組，女性選手亦得參加男子組或混合組賽事，故組別無法由選手性別推導</td></tr>
+        <tr><td>30</td><td>Game</td><td class="mono">ball_type <span class="tag new">NEW</span></td><td>用球材質。本場比賽使用之棒球材質分類</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-016</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。三級棒球部分賽事以用球材質（軟式／硬式）為參賽分組依據，且軟硬式球之飛行特性不同，擊球初速、飛行距離等量測值不宜跨材質直接比較，故須於比賽層級標示</td></tr>
+        <tr><td>31</td><td>Game</td><td class="mono">bat_material <span class="tag new">NEW</span></td><td>球棒材質。本場比賽規定使用之球棒材質分類</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-017</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。木棒與鋁棒（或複合材質棒）之擊球初速差異顯著，為 Statcast 類指標跨賽事比較之重要控制變項；部分三級棒球賽事亦以此為分組依據</td></tr>
       </tbody>
     </table></div>
     </div>
@@ -2053,7 +2110,7 @@ erDiagram
         <tr><td>2</td><td>AtBat</td><td class="mono">game_id <span class="tag fk">FK→Game</span></td><td>比賽識別碼。所屬比賽（比賽打席必填；訓練打席留 null）。game_id 和 session_id 二擇一非空</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Game.game_id</td><td class="src-ref">MLBAM GUMBO liveData.plays.allPlays.matchup</td></tr>
         <tr><td>3</td><td>AtBat</td><td class="mono">session_id <span class="tag fk">FK→Session</span></td><td>訓練識別碼。所屬訓練課次（訓練打席必填；比賽打席留 null）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string</td><td>Session.session_id</td><td class="src-ref">自定義（訓練情境）</td></tr>
         <tr><td>4</td><td>AtBat</td><td class="mono">batter_id <span class="tag fk">FK→Player</span></td><td>打者識別碼。打者球員識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id</td><td class="src-ref">Statcast CSV batter 欄位（MLBAM player_id）</td></tr>
-        <tr><td>5</td><td>AtBat</td><td class="mono">pitcher_id <span class="tag fk">FK→Player</span></td><td>投手識別碼。投手球員識別碼</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id</td><td class="src-ref">Statcast CSV pitcher 欄位（MLBAM player_id）</td></tr>
+        <tr><td>5</td><td>AtBat</td><td class="mono">pitcher_id <span class="tag fk">FK→Player</span></td><td>投手識別碼。投手球員識別碼</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>string</td><td>Player.player_id</td><td class="src-ref">自定義。<b>條件式必填</b>：正式比賽情境（game_id 有值）時必填；訓練情境（session_id 有值，且投球來源為發球機等非真人）時得留空，並以 Pitch.pitch_source 標示投球來源。<b>v0.4.3 調整理由</b>：原設為必填，隱含「每一打席必有真人投手」之比賽情境假設；惟民眾於打擊練習場對發球機打擊時，投球方為機器而非 Player，無 player_id 可填，強制必填將迫使填入假資料或無法上傳，與本標準納入訓練情境及一般民眾運動數據之範圍相牴觸，爰改為條件式必填</td></tr>
         <tr><td>6</td><td>AtBat</td><td class="mono">inning</td><td>局次。打席發生局次（訓練時可用 0 或訓練回合序號）</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>integer</td><td>0–15</td><td class="src-ref">Statcast CSV inning 欄位。MLBAM GUMBO</td></tr>
         <tr><td>7</td><td>AtBat</td><td class="mono">inning_half</td><td>上下半局。上半局或下半局</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>top（上）/ bottom（下）/ N/A（訓練）</td><td class="src-ref">Statcast CSV inning_topbot 欄位</td></tr>
         <tr><td>8</td><td>AtBat</td><td class="mono">event</td><td>打席結果。打席最終結果事件代碼，依 WBSC Rule 16–18 計分定義</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-005</td><td class="src-ref">WBSC Official Rules 2025-2026, Rule 16.8（保送）、Rule 16.9（三振）、Rule 17.1（刺殺）；Statcast CSV events 欄位為參考對照</td></tr>
@@ -2074,7 +2131,7 @@ erDiagram
 
   <!-- Pitch -->
   <div class="dict-ent">
-    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Pitch（投球量測）</span><span class="dict-cnt">59 欄 · Statcast 94% 欄位覆蓋</span></div>
+    <div class="dict-head" onclick="toggleDict(this)"><span class="dict-tog">▾</span><span class="dict-ename">Pitch（投球量測）</span><span class="dict-cnt">61 欄 · Statcast 94% 欄位覆蓋</span></div>
     <div class="dict-body">
     <div class="tw"><table>
       <thead><tr><th>項次</th><th>類別</th><th>屬性或關係</th><th>說明</th><th>選填<br>條件</th><th>最多<br>發生次數</th><th>資料型別</th><th>值域</th><th>附註</th></tr></thead>
@@ -2138,6 +2195,8 @@ erDiagram
         <tr><td>57</td><td>Pitch</td><td class="mono">pitcher_game_pitch_count <span class="tag new" style="margin-left:4px">NEW</span></td><td>投手單場累計球數。該投手在本場比賽中累計投出的球數，用於配球與耐力分析</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>integer</td><td>1–200</td><td class="src-ref">自定義，因應《棒球-1》PitchNo 欄位需求新增；與既有 pitch_number（單打席內序號）為不同概念，對配球疲勞與投手用量分析重要</td></tr>
         <tr><td>58</td><td>Pitch</td><td class="mono">is_bunt_attempt <span class="tag new">NEW</span></td><td>是否擺出觸擊姿勢。本球打者是否具觸擊或偷點意圖（逐球意圖）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>boolean</td><td>true / false</td><td class="src-ref">自定義。本欄位由前版 AtBat.is_bunt 改置於逐球層級——逐球意圖與打席結果本為兩件事：第一球擺短未成、第二球改揮擊之情形，打席層級之欄位無法表達；Statcast 亦將此資訊置於 pitch level 之 description 欄位。「該打席結果是否為犧牲觸擊」之情境已可由 AtBat.event＝sac_bunt（代碼表 CL-005）判斷，故未另設 AtBat.is_sacrifice_bunt</td></tr>
         <tr><td>59</td><td>Pitch</td><td class="mono">spray_angle_deg <span class="tag new">NEW</span></td><td>擊球水平方向角。擊球噴發之水平夾角，以本壘為原點，正值偏右、負值偏左</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>decimal(5,1)</td><td>-45.0–45.0 °</td><td class="src-ref">自定義，因應《棒球-1》direction 欄位需求新增。<b>與 hc_x／hc_y 之關係</b>：兩者資訊重疊，本欄位可由 hc_x／hc_y 經三角函數換算求得。<b>權威順序</b>：當兩者同時由不同來源填入而產生矛盾時，以 hc_x／hc_y 落點座標為權威值，本欄位視為衍生值，此規則載明於資料契約 單位：度（°），命名後綴已標註單位</td></tr>
+        <tr><td>60</td><td>Pitch</td><td class="mono">trajectory_ref <span class="tag new">NEW</span></td><td>投球軌跡資料位址。本球完整 3D 飛行軌跡時序資料之儲存位址</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>string(255)</td><td>URI（物件儲存路徑）</td><td class="src-ref">自定義，因應運科中心第三輪意見新增。既有 pitch_trace_* 系列欄位僅記錄軌跡之九參數擬合係數（vx0/ay/az 等），適於還原標準拋物線軌跡，惟無法保留原始逐幀量測點；本欄位以物件儲存 URI 指向完整時序陣列，設計原則與羽球 Shot.trajectory_ref、BiomechanicsFrame 之 joint3d_ref 一致——時序陣列不置於關聯式欄位</td></tr>
+        <tr><td>61</td><td>Pitch</td><td class="mono">pitch_source <span class="tag new">NEW</span></td><td>投球來源。本球之投出方式（真人投球或發球機餵球）</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-018</td><td class="src-ref">自定義。因應訓練情境（尤其一般民眾於打擊練習場對發球機打擊）新增。<b>用途</b>：（一）作為 AtBat.pitcher_id 條件式必填之判斷依據；（二）供分析時區分「對真人投球之打擊」與「對發球機之打擊」——發球機球路穩定、無配球變化，其擊球初速等指標不宜與比賽情境之數據直接合併統計，須以本欄位作為控制變項。未填時預設視為真人投球（HUMAN）</td></tr>
       </tbody>
     </table></div>
     </div>
@@ -2281,7 +2340,7 @@ erDiagram
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">P</td><td style="padding:6px 12px">季後賽（Postseason）</td><td style="padding:6px 12px;color:var(--text-3)">MLBAM GUMBO</td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">E</td><td style="padding:6px 12px">練習賽（Exhibition）</td><td style="padding:6px 12px;color:var(--text-3)">MLBAM GUMBO</td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">I</td><td style="padding:6px 12px">邀請賽（Invitational）</td><td style="padding:6px 12px;color:var(--text-3)">臺灣自訂擴充</td></tr>
-          <tr><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">W</td><td style="padding:6px 12px">公開賽（Open）</td><td style="padding:6px 12px;color:var(--text-3)">臺灣自訂擴充</td></tr>
+          <tr><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">W</td><td style="padding:6px 12px">公開賽（Open）</td><td style="padding:6px 12px;color:var(--text-3)">臺灣自訂擴充</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">A</td><td style="padding:5px 12px">明星賽（All-Star Game）</td><td style="padding:5px 12px;color:var(--text-3)">自定義，因應運科中心第三輪意見新增</td></tr>
         </tbody>
       </table>
     </div>
@@ -2323,14 +2382,14 @@ erDiagram
         <tbody>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">FF</td><td style="padding:5px 12px">Four-Seam Fastball</td><td style="padding:5px 12px">四縫線速球</td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">FT</td><td style="padding:5px 12px">Two-Seam Fastball</td><td style="padding:5px 12px">二縫線速球</td></tr>
-          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">FC</td><td style="padding:5px 12px">Cutter</td><td style="padding:5px 12px">切球</td></tr>
-          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">SI</td><td style="padding:5px 12px">Sinker</td><td style="padding:5px 12px">下沉球</td></tr>
+          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">FC</td><td style="padding:5px 12px">Cutter</td><td style="padding:5px 12px">卡特球</td></tr>
+          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">SI</td><td style="padding:5px 12px">Sinker</td><td style="padding:5px 12px">伸卡球</td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">SL</td><td style="padding:5px 12px">Slider</td><td style="padding:5px 12px">滑球</td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">CU</td><td style="padding:5px 12px">Curveball</td><td style="padding:5px 12px">曲球</td></tr>
-          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">KC</td><td style="padding:5px 12px">Knuckle Curve</td><td style="padding:5px 12px">指節曲球</td></tr>
+          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">KC</td><td style="padding:5px 12px">Knuckle Curve</td><td style="padding:5px 12px">彈指曲球 <span style="font-size:9px;color:var(--gold-d);border:1px solid var(--gold);border-radius:2px;padding:0 4px">初步調查・待專家確認</span></td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">CH</td><td style="padding:5px 12px">Changeup</td><td style="padding:5px 12px">變速球</td></tr>
-          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">KN</td><td style="padding:5px 12px">Knuckleball</td><td style="padding:5px 12px">指節球</td></tr>
-          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">CS</td><td style="padding:5px 12px">Slow Curve</td><td style="padding:5px 12px">慢曲球</td></tr>
+          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">KN</td><td style="padding:5px 12px">Knuckleball</td><td style="padding:5px 12px">蝴蝶球 <span style="font-size:9px;color:var(--gold-d);border:1px solid var(--gold);border-radius:2px;padding:0 4px">初步調查・待專家確認</span></td></tr>
+          <tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">CS</td><td style="padding:5px 12px">Slow Curve</td><td style="padding:5px 12px">慢速曲球 <span style="font-size:9px;color:var(--gold-d);border:1px solid var(--gold);border-radius:2px;padding:0 4px">初步調查・待專家確認</span></td></tr>
           <tr><td style="padding:5px 12px;font-family:var(--font-mono);color:var(--accent)">OTHER</td><td style="padding:5px 12px">Other / Unclassified</td><td style="padding:5px 12px">其他</td></tr>
         </tbody>
       </table>
@@ -2369,7 +2428,7 @@ erDiagram
         <tbody>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">BULLPEN</td><td style="padding:6px 12px">牛棚練投（無打者）</td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">BP</td><td style="padding:6px 12px">打擊練習（機器或投手）</td></tr>
-          <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">LIVE_AB</td><td style="padding:6px 12px">活體打席（投打對練）</td></tr>
+          <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">LIVE_BP</td><td style="padding:6px 12px">實戰投打（Live Batting Practice，投打對練）</td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">FIELDING</td><td style="padding:6px 12px">守備訓練</td></tr>
           <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">CONDITIONING</td><td style="padding:6px 12px">體能訓練</td></tr>
           <tr><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">SIMULATED_GAME</td><td style="padding:6px 12px">模擬比賽（全隊訓練賽）</td></tr>
@@ -2527,6 +2586,62 @@ erDiagram
         <tbody><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">PRO_LEAGUE</td><td style="padding:6px 12px">職業聯盟賽事</td><td style="padding:6px 12px;color:var(--text-3)">中華職業棒球大聯盟</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">ADULT_A</td><td style="padding:6px 12px">成棒甲組</td><td style="padding:6px 12px;color:var(--text-3)">中華民國棒球協會賽事分組</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">ADULT_B</td><td style="padding:6px 12px">成棒乙組</td><td style="padding:6px 12px;color:var(--text-3)">同上</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">COLLEGE</td><td style="padding:6px 12px">大專組</td><td style="padding:6px 12px;color:var(--text-3)">大專校院棒球運動聯賽</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">HIGH_SCHOOL</td><td style="padding:6px 12px">高中組</td><td style="padding:6px 12px;color:var(--text-3)">高中棒球聯賽</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">YOUTH</td><td style="padding:6px 12px">青少年組</td><td style="padding:6px 12px;color:var(--text-3)">同上</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">COMMUNITY</td><td style="padding:6px 12px">社區／企業組</td><td style="padding:6px 12px;color:var(--text-3)">自定義</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">OTHER</td><td style="padding:6px 12px">其他</td><td style="padding:6px 12px;color:var(--text-3)">自定義補充值</td></tr></tbody>
       </table>
       <div style="padding:7px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-top:1px solid var(--line-2)">自定義。與 Player.player_level（選手層級）為不同概念；與羽球 CL-B05 採同一套設計原則</div>
+    </div>
+
+    <div style="border:1px solid var(--line-2)">
+      <div style="padding:10px 14px;background:var(--bg-1);border-bottom:1px solid var(--line-2);display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);font-weight:600">CL-015</span>
+        <span style="font-size:12px;font-weight:500">競賽性別組別（gender_category）</span>
+        <span class="tag new" style="margin-left:4px">NEW</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);margin-left:auto">Game.gender_category</span>
+      </div>
+      <table style="width:100%;font-size:11.5px;border-collapse:collapse">
+        <thead><tr style="background:var(--bg-1)"><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">代碼值</th><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">中文說明</th><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">來源依據</th></tr></thead>
+        <tbody><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">MALE</td><td style="padding:6px 12px">男子組</td><td style="padding:6px 12px;color:var(--text-3)">國內賽事通行分組</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">FEMALE</td><td style="padding:6px 12px">女子組</td><td style="padding:6px 12px;color:var(--text-3)">如黑豹旗女子組</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">MIXED</td><td style="padding:6px 12px">混合組</td><td style="padding:6px 12px;color:var(--text-3)">男女混合編隊之賽事</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">OPEN</td><td style="padding:6px 12px">不分組</td><td style="padding:6px 12px;color:var(--text-3)">未依性別分組之賽事</td></tr></tbody>
+      </table>
+      <div style="padding:7px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-top:1px solid var(--line-2)">自定義，因應運科中心第三輪意見新增。與 Player.gender（選手個人生理性別）為不同概念，不可混用</div>
+    </div>
+
+    <div style="border:1px solid var(--line-2)">
+      <div style="padding:10px 14px;background:var(--bg-1);border-bottom:1px solid var(--line-2);display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);font-weight:600">CL-016</span>
+        <span style="font-size:12px;font-weight:500">用球材質（ball_type）</span>
+        <span class="tag new" style="margin-left:4px">NEW</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);margin-left:auto">Game.ball_type</span>
+      </div>
+      <table style="width:100%;font-size:11.5px;border-collapse:collapse">
+        <thead><tr style="background:var(--bg-1)"><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">代碼值</th><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">中文說明</th><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">來源依據</th></tr></thead>
+        <tbody><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">HARD</td><td style="padding:6px 12px">硬式棒球</td><td style="padding:6px 12px;color:var(--text-3)">WBSC Official Rules 用球規格</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">SOFT</td><td style="padding:6px 12px">軟式棒球</td><td style="padding:6px 12px;color:var(--text-3)">三級棒球部分賽事採用</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">SAFETY</td><td style="padding:6px 12px">安全球（低反發球）</td><td style="padding:6px 12px;color:var(--text-3)">少棒與幼幼棒球常用</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">OTHER</td><td style="padding:6px 12px">其他</td><td style="padding:6px 12px;color:var(--text-3)">自定義補充值</td></tr></tbody>
+      </table>
+      <div style="padding:7px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-top:1px solid var(--line-2)">自定義，因應運科中心第三輪意見新增。軟硬式球飛行特性不同，擊球初速與飛行距離不宜跨材質直接比較</div>
+    </div>
+
+    <div style="border:1px solid var(--line-2)">
+      <div style="padding:10px 14px;background:var(--bg-1);border-bottom:1px solid var(--line-2);display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);font-weight:600">CL-017</span>
+        <span style="font-size:12px;font-weight:500">球棒材質（bat_material）</span>
+        <span class="tag new" style="margin-left:4px">NEW</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);margin-left:auto">Game.bat_material</span>
+      </div>
+      <table style="width:100%;font-size:11.5px;border-collapse:collapse">
+        <thead><tr style="background:var(--bg-1)"><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">代碼值</th><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">中文說明</th><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">來源依據</th></tr></thead>
+        <tbody><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">WOOD</td><td style="padding:6px 12px">木棒</td><td style="padding:6px 12px;color:var(--text-3)">WBSC Official Rules 球棒規格</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">ALUMINUM</td><td style="padding:6px 12px">鋁棒</td><td style="padding:6px 12px;color:var(--text-3)">三級棒球常用</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">COMPOSITE</td><td style="padding:6px 12px">複合材質棒</td><td style="padding:6px 12px;color:var(--text-3)">碳纖維等複合材質</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">MIXED</td><td style="padding:6px 12px">不限材質</td><td style="padding:6px 12px;color:var(--text-3)">賽事未限制球棒材質</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">OTHER</td><td style="padding:6px 12px">其他</td><td style="padding:6px 12px;color:var(--text-3)">自定義補充值</td></tr></tbody>
+      </table>
+      <div style="padding:7px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-top:1px solid var(--line-2)">自定義，因應運科中心第三輪意見新增。木棒與鋁棒擊球初速差異顯著，為跨賽事比較之重要控制變項</div>
+    </div>
+
+    <div style="border:1px solid var(--line-2)">
+      <div style="padding:10px 14px;background:var(--bg-1);border-bottom:1px solid var(--line-2);display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent);font-weight:600">CL-018</span>
+        <span style="font-size:12px;font-weight:500">投球來源（pitch_source）</span>
+        <span class="tag new" style="margin-left:4px">NEW</span>
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);margin-left:auto">Pitch.pitch_source</span>
+      </div>
+      <table style="width:100%;font-size:11.5px;border-collapse:collapse">
+        <thead><tr style="background:var(--bg-1)"><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">代碼值</th><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">中文說明</th><th style="padding:6px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-bottom:1px solid var(--line-2);text-align:left">來源依據</th></tr></thead>
+        <tbody><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">HUMAN</td><td style="padding:6px 12px">真人投球</td><td style="padding:6px 12px;color:var(--text-3)">預設值；未填時視為本值</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">MACHINE</td><td style="padding:6px 12px">發球機餵球</td><td style="padding:6px 12px;color:var(--text-3)">訓練情境，含民眾打擊練習場</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">TOSS</td><td style="padding:6px 12px">近距離拋餵（Front Toss）</td><td style="padding:6px 12px;color:var(--text-3)">訓練情境</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">TEE</td><td style="padding:6px 12px">打擊座（Batting Tee）</td><td style="padding:6px 12px;color:var(--text-3)">訓練情境，無投球</td></tr><tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 12px;font-family:var(--font-mono);color:var(--accent)">OTHER</td><td style="padding:6px 12px">其他</td><td style="padding:6px 12px;color:var(--text-3)">自定義補充值</td></tr></tbody>
+      </table>
+      <div style="padding:7px 12px;font-family:var(--font-mono);font-size:9px;color:var(--text-4);border-top:1px solid var(--line-2)">自定義。供區分「對真人打擊」與「對機器打擊」，並作為 AtBat.pitcher_id 條件式必填之判斷依據</div>
     </div>
 
   </div>
@@ -3273,6 +3388,7 @@ erDiagram
     ORGANIZATION {
         string org_id PK
         string org_name
+        string org_type
         string org_level
         string sport_code
         boolean bwf_affiliated
@@ -3423,9 +3539,10 @@ erDiagram
       <tbody>
         <tr><td>1</td><td>Organization</td><td class="mono">org_id <span class="tag pk">PK</span></td><td>組織識別碼。組織／協會唯一識別符</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(11)</td><td>TW-BDM-O-{4碼}</td><td class="src-ref">自定義；概念對應 IPTC Sport Schema 賽事骨架之組織層級</td></tr>
         <tr><td>2</td><td>Organization</td><td class="mono">org_name</td><td>組織名稱。組織正式中文名稱</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(60)</td><td>—</td><td class="src-ref">自定義</td></tr>
-        <tr><td>3</td><td>Organization</td><td class="mono">org_level</td><td>組織層級。組織所屬層級</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-B01</td><td class="src-ref">自定義，參照 BWF 會員協會分級精神</td></tr>
-        <tr><td>4</td><td>Organization</td><td class="mono">bwf_affiliated</td><td>是否 BWF 會員。是否為世界羽球總會正式會員協會</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>boolean</td><td>true / false</td><td class="src-ref">Badminton World Federation 官方會員名冊</td></tr>
-        <tr><td>5</td><td>Organization</td><td class="mono">sport_code</td><td>運動代碼。固定為 BDM（Badminton）</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(3)</td><td>BDM</td><td class="src-ref">國際奧會 Olympic Data Feed（ODF）Common Codes｜Sport Codes 官方三碼。與棒球 sport_code 採用同一套官方編碼來源，供未來多運動擴充時之一致對照。</td></tr>
+        <tr><td>3</td><td>Organization</td><td class="mono">org_type <span class="tag new" style="margin-left:4px">NEW</span></td><td>組織類型。本組織之性質分類</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>enum</td><td>LEAGUE / ASSOCIATION / TRAINING_INSTITUTION / SCHOOL / GOVERNMENT / OTHER</td><td class="src-ref">自定義，與棒球 Organization.org_type 採同一套跨運動設計。原設計以賽事主辦之協會／聯盟為預設，惟本平台資料來源包含羽球訓練機構、學校等非賽制組織，本欄位使此類機構取得正確身分，並作為 org_level 條件式必填之判斷依據</td></tr>
+        <tr><td>4</td><td>Organization</td><td class="mono">org_level</td><td>組織層級。組織所屬層級</td><td style="text-align:center">C</td><td style="text-align:center">1</td><td>enum</td><td>見代碼表 CL-B01</td><td class="src-ref">自定義。<b>條件式必填</b>：org_type 為 LEAGUE／ASSOCIATION（賽事型組織）時必填；訓練機構、學校等非賽事型組織得留空。與棒球 Organization 採同一套設計原則</td></tr>
+        <tr><td>5</td><td>Organization</td><td class="mono">bwf_affiliated</td><td>是否 BWF 會員。是否為世界羽球總會正式會員協會</td><td style="text-align:center">O</td><td style="text-align:center">1</td><td>boolean</td><td>true / false</td><td class="src-ref">Badminton World Federation 官方會員名冊</td></tr>
+        <tr><td>6</td><td>Organization</td><td class="mono">sport_code</td><td>運動代碼。固定為 BDM（Badminton）</td><td style="text-align:center">M</td><td style="text-align:center">1</td><td>string(3)</td><td>BDM</td><td class="src-ref">國際奧會 Olympic Data Feed（ODF）Common Codes｜Sport Codes 官方三碼。與棒球 sport_code 採用同一套官方編碼來源，供未來多運動擴充時之一致對照。</td></tr>
       </tbody>
     </table></div>
     </div>
@@ -3864,8 +3981,7 @@ erDiagram
 
   </div>
   <div style="margin-top:12px;padding:10px 14px;background:var(--bg-1);border:1px solid var(--line-2);font-family:var(--font-mono);font-size:9px;color:var(--text-4)">
-    CODE LIST REGISTRY v0.4 · CL-000（跨運動）、CL-B01 至 CL-B07 · 完整十八類球種代碼詳見資料字典 Shot 實體
-  </div>
+    CODE LIST REGISTRY v0.4.3 · CL-000（跨運動）、CL-001 至 CL-018 · 完整代碼詳見各實體附註</div>
 </div>
 </div>
 
@@ -4115,19 +4231,19 @@ erDiagram
 
   <div class="slabel">Review Response Tracking · 累積式追蹤 · 每輪持續新增</div>
   <div class="stitle">意見回覆追蹤</div>
-  <div class="sdesc">本表逐項記錄國家運動科學中心提出之檢視意見，及本團隊對各項意見之處理決定、實作版本與具體說明。本表為<b>累積式</b>——後續各輪意見將持續追加，不覆寫既有紀錄，以完整保留雙方往復討論之軌跡。<br>凡標示為「部分依建議辦理」「待雙方討論」「待貴中心決策」者，均於「我方說明」欄載明理由或待決事項，供後續會議討論。<br><span style="color:var(--text-4)">收錄輪次：第一輪　2026-08-21　國家運動科學中心《資料字典初版檢視意見》　共 33 項；第二輪　2026-08-28　國家運動科學中心第二輪意見（羽球部分）　共 2 項</span></div>
+  <div class="sdesc">本表逐項記錄國家運動科學中心提出之檢視意見，及本團隊對各項意見之處理決定、實作版本與具體說明。本表為<b>累積式</b>——後續各輪意見將持續追加，不覆寫既有紀錄，以完整保留雙方往復討論之軌跡。<br>凡標示為「部分依建議辦理」「待雙方討論」「待貴中心決策」者，均於「我方說明」欄載明理由或待決事項，供後續會議討論。<br><span style="color:var(--text-4)">收錄輪次：第一輪　2026-08-21　國家運動科學中心《資料字典初版檢視意見》　共 33 項；第二輪　2026-08-28　國家運動科學中心第二輪意見（羽球部分）　共 2 項；第三輪　2026-09-03　國家運動科學中心第三輪意見（棒球部分）　共 10 項</span></div>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px">
-    <div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">意見總數</div><div style="font-size:22px;font-weight:600">35</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">依建議辦理</div><div style="font-size:22px;font-weight:600;color:#238551">32</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">部分依建議辦理</div><div style="font-size:22px;font-weight:600;color:#C87619">1</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">部分辦理·待貴中心決策</div><div style="font-size:22px;font-weight:600;color:#C87619">1</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">待貴中心決策</div><div style="font-size:22px;font-weight:600;color:#738091">1</div></div>
+    <div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">意見總數</div><div style="font-size:22px;font-weight:600">45</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">依建議辦理</div><div style="font-size:22px;font-weight:600;color:#238551">40</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">部分依建議辦理</div><div style="font-size:22px;font-weight:600;color:#C87619">3</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">部分辦理·待貴中心決策</div><div style="font-size:22px;font-weight:600;color:#C87619">1</div></div><div style="border:1px solid var(--line-2);padding:12px 16px;border-radius:2px;background:var(--bg)"><div style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">待貴中心決策</div><div style="font-size:22px;font-weight:600;color:#738091">1</div></div>
   </div>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:var(--bg-1);border:1px solid var(--line-2);border-radius:2px">
     <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-4);letter-spacing:.08em;text-transform:uppercase">篩選</span>
-    <select id="rv-round" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部輪次</option><option value="R1">第一輪（2026-08-21）</option><option value="R2">第二輪（2026-08-28）</option></select>
+    <select id="rv-round" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部輪次</option><option value="R1">第一輪（2026-08-21）</option><option value="R2">第二輪（2026-08-28）</option><option value="R3">第三輪（2026-09-03）</option></select>
     <select id="rv-pri" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部優先級</option><option value="P0">P0</option><option value="P1">P1</option><option value="P2">P2</option></select>
     <select id="rv-sport" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部運動別</option><option value="棒球">棒球</option><option value="羽球">羽球</option><option value="跨運動">跨運動</option></select>
     <select id="rv-dec" onchange="reviewFilter()" style="padding:5px 9px;font-size:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--text-2);border-radius:2px;font-family:var(--font-sans)"><option value="ALL">全部處理決定</option><option value="依建議辦理">依建議辦理</option><option value="部分依建議辦理">部分依建議辦理</option><option value="部分辦理·待貴中心決策">部分辦理·待貴中心決策</option><option value="待貴中心決策">待貴中心決策</option></select>
-    <span style="margin-left:auto;font-size:11px;color:var(--text-3)">顯示 <b id="rv-count">35</b> / 35 項</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--text-3)">顯示 <b id="rv-count">45</b> / 45 項</span>
   </div>
 
   <div class="tw" style="border:1px solid var(--line-2)">
@@ -4486,6 +4602,106 @@ erDiagram
         <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
         <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.2-draft</td>
         <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理，本項確為正規化瑕疵，感謝指正。原將 court_name 置於 Venue，惟 Venue 以 venue_id 為主鍵，一場館僅能記錄一筆，多面場地無從表達。本版新增 Court（場地）實體（court_id 為 PK、venue_id 為 FK），以 Venue ‖—◇ Court 一對多關係表達一館多場；court_name 移入 Court，Venue 另移除 court_count（改由 Court 筆數計算）。Match 新增 court_id（FK→Court）指向實際使用之場地，單面場地之場館得留空。場地尺寸因屬 BWF 規則定值、各場地一致，仍留存於 Venue。ERD 同步更新，棒球端不受影響。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P0" data-dec="部分依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-1</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #CD4246;color:#CD4246;border-radius:2px">P0</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">一組織僅能有單一 org_level，建議增設 Tournament 實體並於 Game 加 tournament_id、移除 org_id</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#C87619;background:rgba(200,118,25,.10);border-radius:2px;display:inline-block">部分依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">主要建議依建議辦理，惟 org_id 建議保留。（一）已新增 Tournament（賽事）實體：tournament_id（PK）、host_org_id（FK→Organization）、tournament_level（賽制層級）、season_year、start_date、end_date、event_category，並於 Game 新增 tournament_id。賽制層級自 Organization 移轉至賽事層級後，同一組織得同時主辦成棒、青棒、少棒等多層級賽事。本項亦補齊與羽球端 Tournament 之跨運動結構對稱，原屬本團隊設計疏漏，感謝指正。（二）<b>Game.org_id 建議保留為選填</b>，理由有二：1. 訓練賽、教育訓練機構自辦活動、民眾自主練習等場次不隸屬任何正式賽事，無 tournament_id 可填，移除後將失去登錄單位之歸屬與追溯路徑，與本標準納入訓練情境之範圍相牴觸；2. 二者語意分工非重複——tournament_id 表達「屬於哪一項賽事」、org_id 表達「由哪個組織登錄」，正式賽事填前者、非賽事場次填後者。倘貴中心仍認應予移除，敬請於定版前告知，本團隊將依示辦理。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P1" data-dec="依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-2</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #C87619;color:#C87619;border-radius:2px">P1</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">職業球團一、二軍共用 team_id 需可識別，或改為各自獨立 team_id</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理，採「各自獨立 team_id」方案。一、二軍各自建立獨立 team_id，以既有 league_level 欄位標示軍別（如 PRO_1ST／PRO_2ND），並新增 parent_team_id（FK→Team，自我參照）表達所屬母球團。採獨立 team_id 而非單一 team_id 附加識別屬性，係因一、二軍之球員名單（Roster）、出賽紀錄（Game）、主場與戰績均各自獨立；若共用同一 team_id，Roster 與 Game 之關聯將無從區分軍別，形成資料混淆。採自我參照設計後，「查詢某球團所有軍別」得以 parent_team_id 遞迴取得，毋須另建球團上位實體。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P1" data-dec="依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-3</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #C87619;color:#C87619;border-radius:2px">P1</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">三級棒球有以球／球棒材質為分組依據，建議 Game 加入相關屬性</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理。Game 新增 ball_type（用球材質，代碼表 CL-016：HARD／SOFT／SAFETY／OTHER）與 bat_material（球棒材質，代碼表 CL-017：WOOD／ALUMINUM／COMPOSITE／MIXED／OTHER）。除作為參賽分組依據外，此二欄位亦為量測資料之重要控制變項——軟硬式球飛行特性不同、木棒與鋁棒擊球初速差異顯著，跨材質之擊球初速與飛行距離不宜直接合併比較，此點已載明於欄位附註。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P1" data-dec="依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-4</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #C87619;color:#C87619;border-radius:2px">P1</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">參照羽球 Match.discipline，Game 加入競賽類別以區分男子組／女子組／混合組</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理。Game 新增 gender_category（代碼表 CL-015：MALE／FEMALE／MIXED／OPEN），設計精神參照羽球 Match.discipline。附註特別載明其<b>與 Player.gender 之區別</b>：本欄位為賽事組別（賽會如何分組），Player.gender 為選手個人生理性別，二者不可混用——如黑豹旗設有女子組，且女性選手亦得參加男子組或混合組賽事，故組別無法由選手性別推導。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P1" data-dec="依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-5</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #C87619;color:#C87619;border-radius:2px">P1</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">AthleteMetric 與 SwingMechanics 可加入 session_id 以補充 Session 細節</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理。二實體均新增 session_id（FK→Session，選填）。AthleteMetric 既有 context 欄位已含 SESSION 值，卻無對應外鍵可連結至實際課次，致訓練情境之量測無從追溯課表、場地與訓練內容，確屬設計斷點；SwingMechanics 亦多於訓練課次中進行，補此關聯後得取得完整訓練脈絡。非訓練情境之量測則留空。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P1" data-dec="依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-6</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #C87619;color:#C87619;border-radius:2px">P1</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">Pitch 增加投球軌跡資料位址</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理。Pitch 新增 trajectory_ref（URI）。既有 pitch_trace_* 系列欄位僅記錄軌跡之九參數擬合係數，適於還原標準拋物線軌跡，惟無法保留原始逐幀量測點；本欄位以物件儲存 URI 指向完整時序陣列，設計原則與羽球 Shot.trajectory_ref、BiomechanicsFrame.joint3d_ref 一致——時序陣列不置於關聯式欄位。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P1" data-dec="依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-7</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #C87619;color:#C87619;border-radius:2px">P1</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">2D 關節座標為建構 3D 骨架之必備資訊，建議增加 BiomechanicsFrame.joint2d_ref</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理。BiomechanicsFrame 新增 joint2d_ref（URI）。保留 2D 座標方可供後續重建演算法更新時重新推算 3D 骨架，或供 2D 影像疊合檢視；若僅保存 3D 結果，原始推算依據將無從回溯。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P0" data-dec="依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-8</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #CD4246;color:#CD4246;border-radius:2px">P0</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">需記錄 2D／3D 關節階層（hierarchy），並新增 forward_axis 與 up_axis 以宣告座標系方向</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">依建議辦理。BiomechanicsFrame 新增：（一）joint_hierarchy_ref（URI）——關節座標僅為數值陣列，須搭配關節階層定義（父子連接關係與索引順序）方能還原骨架結構，不同動作捕捉系統之關節數量與排序不一，缺此定義將無法跨系統解讀，本欄位同時適用於 2D 與 3D；（二）forward_axis 與 up_axis（值域 +X／-X／+Y／-Y／+Z／-Z，條件式必填：填有 joint3d_ref 時必填）——3D 骨架座標系慣例因系統而異（如 Y-up 與 Z-up 之別），若未明確宣告，同一組座標於不同系統解讀將產生翻轉或朝向錯誤，確為動作資料跨系統交換最常見之失效原因。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P2" data-dec="部分依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-9</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #738091;color:#738091;border-radius:2px">P2</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">代碼表細項調整：CL-002 增列明星賽、CL-004 中文俗稱調整、CL-006 LIVE_AB 改為 LIVE_BP</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#C87619;background:rgba(200,118,25,.10);border-radius:2px;display:inline-block">部分依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">多數依建議辦理，三項球種中文俗稱俟專家確認。（一）CL-002 已增列明星賽（代碼 A）。（二）CL-004 中文俗稱已修正：Cutter 由「切球」改為「卡特球」、Sinker 由「下沉球」改為「伸卡球」。Knuckle Curve、Knuckleball、Slow Curve 三項，本團隊已先行查考球界通行用法，初步建議譯為「彈指曲球」「蝴蝶球」「慢速曲球」，並已更新於代碼表，加註「初步調查・待專家確認」標示；俟下週與專家確認後再行定稿。（三）CL-006 LIVE_AB 已更名為 LIVE_BP（Live Batting Practice，實戰投打），確為較通行之表示法。</td>
+      </tr>
+      <tr data-round="R3" data-pri="P1" data-dec="依建議辦理" data-sport="棒球">
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;font-family:var(--font-mono);font-size:10px;color:var(--text-4)">第三輪<br><span style="font-size:9px">2026-09-03</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text)">R3-10</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center"><span style="font-family:var(--font-mono);font-size:9px;font-weight:700;padding:1px 6px;border:1px solid #C87619;color:#C87619;border-radius:2px">P1</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-3);white-space:nowrap">棒球</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--text-2);min-width:190px">【前輪擱置事項】訓練情境對發球機打擊時 pitcher_id 無法填列</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap"><span style="font-size:10.5px;font-weight:600;padding:3px 8px;color:#238551;background:rgba(35,133,81,.10);border-radius:2px;display:inline-block">依建議辦理</span></td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:10px;color:var(--text-3);white-space:nowrap">v0.4.3-draft</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--text-2);line-height:1.7">本項為前輪討論後擱置、本輪一併處理之事項。AtBat.pitcher_id 由必填改為條件式必填（C）：正式比賽（game_id 有值）時必填，訓練情境（session_id 有值且投球來源非真人）時得留空；另於 Pitch 新增 pitch_source（代碼表 CL-018：HUMAN／MACHINE／TOSS／TEE／OTHER）標示投球來源。原設為必填隱含「每一打席必有真人投手」之比賽情境假設，惟民眾於打擊練習場對發球機打擊時無 player_id 可填，強制必填將迫使填入假資料，與本標準納入訓練情境及一般民眾運動數據之範圍相牴觸。現階段仍沿用 AtBat／Pitch 既有模型承接訓練打擊資料；倘後續民眾自主練習資料量體顯著成長，將另行評估是否設計輕量化訓練打擊模型。</td>
       </tr>
       </tbody>
     </table>
