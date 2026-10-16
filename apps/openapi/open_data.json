@@ -1,0 +1,5863 @@
+{
+ "openapi": "3.0.3",
+ "info": {
+  "title": "臺灣運動數據標準｜開放資料 API",
+  "version": "1.0.0",
+  "description": "本專案實際處理之三份真實資料，依《臺灣運動數據標準》1.0.0 清整後之 **Staging 層**資料。\n\n- **一張表對應標準之一個實體，一欄對應資料典之一個欄位**：欄位名稱、型別、代碼值與規範書相同，讀規範書即能使用。\n- 外來鍵以**業務碼**（如 `tournament_code`）表示；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。\n- 每次查詢回傳 `total`（符合條件總筆數）與一頁資料；以 `limit`／`offset` 分頁，以欄位名稱為參數篩選。\n- 需 API 金鑰（標頭 `X-API-Key`）；展示頁已預先填入公開唯讀金鑰。流量上限依金鑰角色。\n\n**為何開放 Staging 而非 Mart**：Staging 是依標準清整後之資料，欄位即規範書所定，不隨頁面改版而變，適合作為對外承諾之介面；Mart 為特定圖表之彙總寬表，供分析頁面使用（`/api/v1/demo/*.json`），不作為開放介面。",
+  "contact": {
+   "name": "國家運動科學中心"
+  }
+ },
+ "servers": [
+  {
+   "url": "/api/v1/open",
+   "description": "與示範網站同一主機（部署於國網中心後可直接 Try it out）"
+  }
+ ],
+ "security": [
+  {
+   "APIKeyHeader": []
+  }
+ ],
+ "tags": [
+  {
+   "name": "資料集目錄",
+   "description": "全部可查詢之資料集"
+  },
+  {
+   "name": "棒球賽事（baseball_game）",
+   "description": "運科中心提供之示範賽（2026-08-01 兩場、4 隊）之比賽、打席、逐球事件與追蹤量測。來源未提供球員姓名，以隊別與棒次標示。"
+  },
+  {
+   "name": "羽球賽事（badminton_tournament）",
+   "description": "2026 年第一次、第二次全國羽球排名賽之全部對戰與局分（中華民國羽球協會公開成績），含輪空籤位（status = BYE）。"
+  },
+  {
+   "name": "羽球技戰術（badminton_shuttleset）",
+   "description": "ShuttleSet（國立陽明交通大學，MIT 授權）國際賽逐拍標註：比賽、局、回合、擊球（球種、落點、擊球點、雙方站位與場區代碼）。"
+  }
+ ],
+ "paths": {
+  "/datasets": {
+   "get": {
+    "tags": [
+     "資料集目錄"
+    ],
+    "operationId": "list_datasets",
+    "summary": "列出全部資料集（資料域、表、對應實體、筆數）",
+    "responses": {
+     "200": {
+      "description": "資料集目錄",
+      "content": {
+       "application/json": {
+        "example": {
+         "datasets": [
+          {
+           "dataset": "baseball_game/data_provider",
+           "domain": "baseball_game",
+           "domain_name": "棒球賽事",
+           "table": "data_provider",
+           "entity": "DataProvider",
+           "label": "DataProvider（資料提供者）",
+           "rows": 1,
+           "columns": [
+            "provider_code",
+            "provider_name",
+            "provider_type"
+           ],
+           "filters": [
+            "provider_code"
+           ]
+          },
+          {
+           "dataset": "baseball_game/event",
+           "domain": "baseball_game",
+           "domain_name": "棒球賽事",
+           "table": "event",
+           "entity": "Event",
+           "label": "Event（比賽事件）",
+           "rows": 821,
+           "columns": [
+            "event_code",
+            "game_code",
+            "provider_code",
+            "inning_number",
+            "inning_half",
+            "pa_key",
+            "event_seq",
+            "event_type",
+            "event_time",
+            "pitch_source",
+            "pitcher_code",
+            "pitcher_throws",
+            "batter_code",
+            "batter_side",
+            "catcher_code",
+            "batting_team_code",
+            "pitch_no",
+            "pitch_of_pa",
+            "balls_before",
+            "strikes_before",
+            "outs_before",
+            "runners_state",
+            "event_result",
+            "home_score_before",
+            "away_score_before",
+            "count_state",
+            "src_event_code",
+            "pa_result_src",
+            "raw_record_key"
+           ],
+           "filters": [
+            "event_code",
+            "game_code",
+            "provider_code",
+            "event_type",
+            "pitcher_code",
+            "batter_code",
+            "catcher_code",
+            "batting_team_code",
+            "src_event_code"
+           ]
+          }
+         ]
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     }
+    }
+   }
+  },
+  "/badminton_shuttleset/match": {
+   "get": {
+    "tags": [
+     "羽球技戰術（badminton_shuttleset）"
+    ],
+    "operationId": "get_badminton_shuttleset_match",
+    "summary": "Match（單場對戰）　44 筆",
+    "description": "Staging 表 `staging.badminton_shuttleset_match`（共 44 筆）。欄位定義依規範書資料典之 Match 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `match_code,tournament_code,match_date`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-match_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_code",
+      "in": "query",
+      "description": "篩選：match_code 等於此值（單場對戰業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "tournament_code",
+      "in": "query",
+      "description": "篩選：tournament_code 等於此值（所屬賽事之業務碼（標準欄位 tournament_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "discipline",
+      "in": "query",
+      "description": "篩選：discipline 等於此值（競賽類別。本場比賽所屬競賽類別）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "description": "篩選：status 等於此值（比賽狀態。本場比賽之最終狀態；代碼見代碼表 CL-B06）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "side_a_player_code",
+      "in": "query",
+      "description": "篩選：side_a_player_code 等於此值（甲方選手之業務碼（標準欄位 side_a_player_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "side_b_player_code",
+      "in": "query",
+      "description": "篩選：side_b_player_code 等於此值（乙方選手之業務碼（標準欄位 side_b_player_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_shuttleset__match"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_shuttleset/match",
+         "total": 44,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "match_code": "TW-BDM-M-63973036",
+           "tournament_code": "TW-BDM-TN-431020",
+           "match_date": "2019-11-10",
+           "round_name": "Finals",
+           "discipline": "MS",
+           "status": "FINISHED",
+           "side_a_player_code": "TW-BDM-P-386753",
+           "side_b_player_code": "TW-BDM-P-282643",
+           "duration_min": 83,
+           "games_won_a": 2,
+           "games_won_b": 1,
+           "winner_side": "A",
+           "video_uri": "https://www.youtube.com/watch?v=O669aZhH0LI",
+           "side_a_name": "Kento MOMOTA",
+           "side_b_name": "CHOU Tien Chen"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_shuttleset/match_game": {
+   "get": {
+    "tags": [
+     "羽球技戰術（badminton_shuttleset）"
+    ],
+    "operationId": "get_badminton_shuttleset_match_game",
+    "summary": "MatchGame（局）　104 筆",
+    "description": "Staging 表 `staging.badminton_shuttleset_match_game`（共 104 筆）。欄位定義依規範書資料典之 MatchGame 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `match_game_code,match_code,game_no`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-match_game_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_game_code",
+      "in": "query",
+      "description": "篩選：match_game_code 等於此值（局業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_code",
+      "in": "query",
+      "description": "篩選：match_code 等於此值（所屬比賽之業務碼（標準欄位 match_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "game_no",
+      "in": "query",
+      "description": "篩選：game_no 等於此值（局數。本局為該場比賽第幾局）",
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_shuttleset__match_game"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_shuttleset/match_game",
+         "total": 104,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "match_game_code": "TW-BDM-M-63973036-G1",
+           "match_code": "TW-BDM-M-63973036",
+           "game_no": 1,
+           "score_a_final": 21,
+           "score_b_final": 15
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_shuttleset/person": {
+   "get": {
+    "tags": [
+     "羽球技戰術（badminton_shuttleset）"
+    ],
+    "operationId": "get_badminton_shuttleset_person",
+    "summary": "Person（人員）　27 筆",
+    "description": "Staging 表 `staging.badminton_shuttleset_person`（共 27 筆）。欄位定義依規範書資料典之 Person 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `person_code,full_name_en,full_name_zh`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-person_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "person_code",
+      "in": "query",
+      "description": "篩選：person_code 等於此值（人員業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_shuttleset__person"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_shuttleset/person",
+         "total": 27,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "person_code": "TW-BDM-P-282643",
+           "full_name_en": "CHOU Tien Chen",
+           "full_name_zh": "周天成",
+           "person_role": "PLAYER",
+           "player_level": "ELITE"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_shuttleset/quality_issue": {
+   "get": {
+    "tags": [
+     "羽球技戰術（badminton_shuttleset）"
+    ],
+    "operationId": "get_badminton_shuttleset_quality_issue",
+    "summary": "資料品質紀錄　232 筆",
+    "description": "Staging 表 `staging.badminton_shuttleset_quality_issue`（共 232 筆）。標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `source,rule,severity`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-source`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "rule",
+      "in": "query",
+      "description": "篩選：rule 等於此值（延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "severity",
+      "in": "query",
+      "description": "篩選：severity 等於此值（延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_shuttleset__quality_issue"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_shuttleset/quality_issue",
+         "total": 232,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "source": "badminton_shuttleset",
+           "rule": "CODE_MAPPED",
+           "severity": "INFO",
+           "entity": "Shot",
+           "field": "shot_type",
+           "raw_key": "過度切球",
+           "before": "過度切球",
+           "after": "PASSIVE_DROP",
+           "note": "資料集釋出檔之錯字「過度切球」對應為 PASSIVE_DROP（過渡切球），共 1356 拍"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_shuttleset/rally": {
+   "get": {
+    "tags": [
+     "羽球技戰術（badminton_shuttleset）"
+    ],
+    "operationId": "get_badminton_shuttleset_rally",
+    "summary": "Rally（回合）　3,683 筆",
+    "description": "Staging 表 `staging.badminton_shuttleset_rally`（共 3,683 筆）。欄位定義依規範書資料典之 Rally 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `rally_code,match_game_code,match_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-rally_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "rally_code",
+      "in": "query",
+      "description": "篩選：rally_code 等於此值（回合業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_game_code",
+      "in": "query",
+      "description": "篩選：match_game_code 等於此值（所屬局之業務碼（標準欄位 match_game_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_code",
+      "in": "query",
+      "description": "篩選：match_code 等於此值（業務碼（match_code））",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_shuttleset__rally"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_shuttleset/rally",
+         "total": 3683,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "rally_code": "TW-BDM-R-4067610341",
+           "match_game_code": "TW-BDM-M-63973036-G1",
+           "match_code": "TW-BDM-M-63973036",
+           "rally_seq": 1,
+           "score_a": 1,
+           "score_b": 0,
+           "win_reason": "OUT",
+           "point_to": "A",
+           "shots": 2
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_shuttleset/shot": {
+   "get": {
+    "tags": [
+     "羽球技戰術（badminton_shuttleset）"
+    ],
+    "operationId": "get_badminton_shuttleset_shot",
+    "summary": "Shot（擊球）　36,484 筆",
+    "description": "Staging 表 `staging.badminton_shuttleset_shot`（共 36,484 筆）。欄位定義依規範書資料典之 Shot 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `shot_code,rally_code,match_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-shot_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "shot_code",
+      "in": "query",
+      "description": "篩選：shot_code 等於此值（擊球業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "rally_code",
+      "in": "query",
+      "description": "篩選：rally_code 等於此值（所屬回合之業務碼（標準欄位 rally_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_code",
+      "in": "query",
+      "description": "篩選：match_code 等於此值（業務碼（match_code））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "game_no",
+      "in": "query",
+      "description": "篩選：game_no 等於此值（延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內）",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "person_code",
+      "in": "query",
+      "description": "篩選：person_code 等於此值（擊球選手之業務碼（標準欄位 person_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "side",
+      "in": "query",
+      "description": "篩選：side 等於此值（延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "shot_type",
+      "in": "query",
+      "description": "篩選：shot_type 等於此值（球種。本次擊球之動作分類；代碼見代碼表 CL-B02）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "provider_code",
+      "in": "query",
+      "description": "篩選：provider_code 等於此值（資料提供者之業務碼（標準欄位 provider_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_shuttleset__shot"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_shuttleset/shot",
+         "total": 36484,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "shot_code": "TW-BDM-S-238622496967",
+           "rally_code": "TW-BDM-R-4067610341",
+           "match_code": "TW-BDM-M-63973036",
+           "game_no": 1,
+           "person_code": "TW-BDM-P-282643",
+           "side": "B",
+           "shot_seq": 2,
+           "shot_type": "CLEAR",
+           "shot_type_src": "長球",
+           "landing_x_m": 1.68,
+           "landing_y_m": 6.943,
+           "landing_height": "BELOW_NET",
+           "is_around_head": false,
+           "backhand": true,
+           "is_winner": false,
+           "error_type": "OUT",
+           "video_frame_no": 11582,
+           "video_time": "00:07:43",
+           "landing_area": 13.0,
+           "hit_x_m": -0.214,
+           "hit_y_m": -1.979,
+           "hit_area": 7.0,
+           "player_x_m": -0.48,
+           "player_y_m": -2.543,
+           "player_area": 8.0,
+           "opponent_x_m": 0.007,
+           "opponent_y_m": 3.597,
+           "opponent_area": 8.0,
+           "provider_code": "TW-PRV-000301"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_shuttleset/tournament": {
+   "get": {
+    "tags": [
+     "羽球技戰術（badminton_shuttleset）"
+    ],
+    "operationId": "get_badminton_shuttleset_tournament",
+    "summary": "Tournament（賽事）　16 筆",
+    "description": "Staging 表 `staging.badminton_shuttleset_tournament`（共 16 筆）。欄位定義依規範書資料典之 Tournament 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `tournament_code,tournament_name,tier`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-tournament_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "tournament_code",
+      "in": "query",
+      "description": "篩選：tournament_code 等於此值（賽事業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_shuttleset__tournament"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_shuttleset/tournament",
+         "total": 16,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "tournament_code": "TW-BDM-TN-431020",
+           "tournament_name": "Fuzhou Open 2019",
+           "tier": "BWF_WORLD_TOUR",
+           "year": 2019
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_tournament/match": {
+   "get": {
+    "tags": [
+     "羽球賽事（badminton_tournament）"
+    ],
+    "operationId": "get_badminton_tournament_match",
+    "summary": "Match（單場對戰）　3,935 筆",
+    "description": "Staging 表 `staging.badminton_tournament_match`（共 3,935 筆）。欄位定義依規範書資料典之 Match 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `match_code,tournament_code,match_date`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-match_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_code",
+      "in": "query",
+      "description": "篩選：match_code 等於此值（單場對戰業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "tournament_code",
+      "in": "query",
+      "description": "篩選：tournament_code 等於此值（所屬賽事之業務碼（標準欄位 tournament_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "venue_code",
+      "in": "query",
+      "description": "篩選：venue_code 等於此值（比賽場地之業務碼（標準欄位 venue_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "event_category",
+      "in": "query",
+      "description": "篩選：event_category 等於此值（參賽組別。本場比賽所屬之參賽組別；代碼見代碼表 CL-B05）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "discipline",
+      "in": "query",
+      "description": "篩選：discipline 等於此值（競賽類別。本場比賽所屬競賽類別）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "side_a_player_code",
+      "in": "query",
+      "description": "篩選：side_a_player_code 等於此值（甲方選手之業務碼（標準欄位 side_a_player_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "side_b_player_code",
+      "in": "query",
+      "description": "篩選：side_b_player_code 等於此值（乙方選手之業務碼（標準欄位 side_b_player_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "side_a_pair_code",
+      "in": "query",
+      "description": "篩選：side_a_pair_code 等於此值（甲方配對之業務碼（標準欄位 side_a_pair_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "side_b_pair_code",
+      "in": "query",
+      "description": "篩選：side_b_pair_code 等於此值（乙方配對之業務碼（標準欄位 side_b_pair_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "description": "篩選：status 等於此值（比賽狀態。本場比賽之最終狀態；代碼見代碼表 CL-B06）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_tournament__match"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_tournament/match",
+         "total": 3935,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "match_code": "TW-BDM-M-09522445",
+           "tournament_code": "TW-BDM-TN-260001",
+           "match_date": "2025-12-29",
+           "venue_code": "TW-BDM-V-0001",
+           "start_time": "15:30",
+           "round_name": "甲組會外 Q#1",
+           "event_category": "GROUP_A",
+           "stage": "會外",
+           "match_no": "Q#1",
+           "discipline": "MD",
+           "event": "男子雙打",
+           "side_a_player_code": null,
+           "side_b_player_code": null,
+           "side_a_pair_code": "TW-BDM-PR-332352",
+           "side_b_pair_code": "TW-BDM-PR-231066",
+           "side_a_p1": "TW-BDM-P-337874",
+           "side_a_p2": "TW-BDM-P-782513",
+           "side_b_p1": "TW-BDM-P-561707",
+           "side_b_p2": "TW-BDM-P-647565",
+           "side_a_team": "土銀北市大",
+           "side_b_team": "亞柏國體大",
+           "side_a_seed": null,
+           "side_b_seed": null,
+           "status": "FINISHED",
+           "duration_min": 26.0,
+           "games_won_a": 2.0,
+           "games_won_b": 0.0,
+           "winner_side": "A",
+           "score_text": "21-15 21-11 26'",
+           "raw_object_ref": "s3://raw/badminton/tournament/CTBA/男甲雙會外賽"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_tournament/match_game": {
+   "get": {
+    "tags": [
+     "羽球賽事（badminton_tournament）"
+    ],
+    "operationId": "get_badminton_tournament_match_game",
+    "summary": "MatchGame（局）　6,132 筆",
+    "description": "Staging 表 `staging.badminton_tournament_match_game`（共 6,132 筆）。欄位定義依規範書資料典之 MatchGame 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `match_game_code,match_code,game_no`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-match_game_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_game_code",
+      "in": "query",
+      "description": "篩選：match_game_code 等於此值（局業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "match_code",
+      "in": "query",
+      "description": "篩選：match_code 等於此值（所屬比賽之業務碼（標準欄位 match_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "game_no",
+      "in": "query",
+      "description": "篩選：game_no 等於此值（局數。本局為該場比賽第幾局）",
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_tournament__match_game"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_tournament/match_game",
+         "total": 6132,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "match_game_code": "TW-BDM-M-08450314-G1",
+           "match_code": "TW-BDM-M-08450314",
+           "game_no": 1,
+           "score_a_final": 21,
+           "score_b_final": 19
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_tournament/organization": {
+   "get": {
+    "tags": [
+     "羽球賽事（badminton_tournament）"
+    ],
+    "operationId": "get_badminton_tournament_organization",
+    "summary": "Organization（組織）　1 筆",
+    "description": "Staging 表 `staging.badminton_tournament_organization`（共 1 筆）。欄位定義依規範書資料典之 Organization 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `org_code,org_name,org_type`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-org_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "org_code",
+      "in": "query",
+      "description": "篩選：org_code 等於此值（組織業務碼。對外顯示與交換用之可讀識別碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sport_code",
+      "in": "query",
+      "description": "篩選：sport_code 等於此值（運動代碼。羽球固定為 BDM；代碼見代碼表 CL-000）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_tournament__organization"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_tournament/organization",
+         "total": 1,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "org_code": "TW-BDM-O-0001",
+           "org_name": "中華民國羽球協會",
+           "org_type": "ASSOCIATION",
+           "bwf_affiliated": true,
+           "sport_code": "BDM"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_tournament/pair": {
+   "get": {
+    "tags": [
+     "羽球賽事（badminton_tournament）"
+    ],
+    "operationId": "get_badminton_tournament_pair",
+    "summary": "Pair（雙打配對）　1,057 筆",
+    "description": "Staging 表 `staging.badminton_tournament_pair`（共 1,057 筆）。欄位定義依規範書資料典之 Pair 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `pair_code,player_a_code,player_b_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-pair_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "pair_code",
+      "in": "query",
+      "description": "篩選：pair_code 等於此值（雙打配對業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "player_a_code",
+      "in": "query",
+      "description": "篩選：player_a_code 等於此值（選手甲之業務碼（標準欄位 player_a_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "player_b_code",
+      "in": "query",
+      "description": "篩選：player_b_code 等於此值（選手乙之業務碼（標準欄位 player_b_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "discipline",
+      "in": "query",
+      "description": "篩選：discipline 等於此值（雙打類別。此配對所屬之雙打競賽類別）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_tournament__pair"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_tournament/pair",
+         "total": 1057,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "pair_code": "TW-BDM-PR-332352",
+           "player_a_code": "TW-BDM-P-337874",
+           "player_b_code": "TW-BDM-P-782513",
+           "discipline": "MD"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_tournament/person": {
+   "get": {
+    "tags": [
+     "羽球賽事（badminton_tournament）"
+    ],
+    "operationId": "get_badminton_tournament_person",
+    "summary": "Person（人員）　1,997 筆",
+    "description": "Staging 表 `staging.badminton_tournament_person`（共 1,997 筆）。欄位定義依規範書資料典之 Person 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `person_code,full_name_zh,person_role`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-person_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "person_code",
+      "in": "query",
+      "description": "篩選：person_code 等於此值（人員業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_tournament__person"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_tournament/person",
+         "total": 1997,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "person_code": "TW-BDM-P-980488",
+           "full_name_zh": "趙晨勛",
+           "person_role": "PLAYER",
+           "teams": "Z羽道場／國家訓練中心"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_tournament/quality_issue": {
+   "get": {
+    "tags": [
+     "羽球賽事（badminton_tournament）"
+    ],
+    "operationId": "get_badminton_tournament_quality_issue",
+    "summary": "資料品質紀錄　708 筆",
+    "description": "Staging 表 `staging.badminton_tournament_quality_issue`（共 708 筆）。標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `source,rule,severity`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-source`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "rule",
+      "in": "query",
+      "description": "篩選：rule 等於此值（延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "severity",
+      "in": "query",
+      "description": "篩選：severity 等於此值（延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_tournament__quality_issue"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_tournament/quality_issue",
+         "total": 708,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "source": "badminton_tournament",
+           "rule": "DATE_TYPO",
+           "severity": "WARN",
+           "entity": "Tournament",
+           "field": "start_date",
+           "raw_key": "2026_第二次全國羽球排名賽.xlsx!統計表",
+           "before": "日期 : 118年8月11日至115年8月19日",
+           "after": "2026-08-11",
+           "note": "統計表日期誤植為 118 年，依場地分配表更正"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_tournament/tournament": {
+   "get": {
+    "tags": [
+     "羽球賽事（badminton_tournament）"
+    ],
+    "operationId": "get_badminton_tournament_tournament",
+    "summary": "Tournament（賽事）　2 筆",
+    "description": "Staging 表 `staging.badminton_tournament_tournament`（共 2 筆）。欄位定義依規範書資料典之 Tournament 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `tournament_code,tournament_name,tier`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-tournament_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "tournament_code",
+      "in": "query",
+      "description": "篩選：tournament_code 等於此值（賽事業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "host_org_code",
+      "in": "query",
+      "description": "篩選：host_org_code 等於此值（主辦單位之業務碼（標準欄位 host_org_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "venue_code",
+      "in": "query",
+      "description": "篩選：venue_code 等於此值（業務碼（venue_code））",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_tournament__tournament"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_tournament/tournament",
+         "total": 2,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "tournament_code": "TW-BDM-TN-260001",
+           "tournament_name": "2026年第一次全國羽球排名賽",
+           "tier": "DOMESTIC_OPEN",
+           "host_org_code": "TW-BDM-O-0001",
+           "host_org": "中華民國羽球協會",
+           "venue_code": "TW-BDM-V-0001",
+           "venue_name": "長庚科技大學體育館",
+           "start_date": "2025-12-27",
+           "end_date": "2026-01-04",
+           "expected_matches": 1422
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/badminton_tournament/venue": {
+   "get": {
+    "tags": [
+     "羽球賽事（badminton_tournament）"
+    ],
+    "operationId": "get_badminton_tournament_venue",
+    "summary": "Venue（場館）　2 筆",
+    "description": "Staging 表 `staging.badminton_tournament_venue`（共 2 筆）。欄位定義依規範書資料典之 Venue 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `venue_code,venue_name,venue_type`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-venue_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "venue_code",
+      "in": "query",
+      "description": "篩選：venue_code 等於此值（場館業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "city_code",
+      "in": "query",
+      "description": "篩選：city_code 等於此值（縣市代碼。場館所在縣市行政代碼）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/badminton_tournament__venue"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "badminton_tournament/venue",
+         "total": 2,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "venue_code": "TW-BDM-V-0001",
+           "venue_name": "長庚科技大學體育館",
+           "venue_type": "SCHOOL",
+           "city_code": "68000"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/data_provider": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_data_provider",
+    "summary": "DataProvider（資料提供者）　1 筆",
+    "description": "Staging 表 `staging.baseball_game_data_provider`（共 1 筆）。欄位定義依規範書資料典之 DataProvider 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `provider_code,provider_name,provider_type`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-provider_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "provider_code",
+      "in": "query",
+      "description": "篩選：provider_code 等於此值（提供者業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__data_provider"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/data_provider",
+         "total": 1,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "provider_code": "TW-PRV-000201",
+           "provider_name": "國家運動訓練中心棒球場追蹤系統（運科中心示範賽）",
+           "provider_type": "VENUE_OPERATOR"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/event": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_event",
+    "summary": "Event（比賽事件）　821 筆",
+    "description": "Staging 表 `staging.baseball_game_event`（共 821 筆）。欄位定義依規範書資料典之 Event 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `event_code,game_code,provider_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-event_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "event_code",
+      "in": "query",
+      "description": "篩選：event_code 等於此值（事件識別碼之業務碼（標準欄位 event_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "game_code",
+      "in": "query",
+      "description": "篩選：game_code 等於此值（所屬比賽之業務碼（標準欄位 game_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "provider_code",
+      "in": "query",
+      "description": "篩選：provider_code 等於此值（建立本事件事實之主來源之業務碼（標準欄位 provider_id 對外以業務碼表）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "event_type",
+      "in": "query",
+      "description": "篩選：event_type 等於此值（事件類型；代碼見代碼表 CL-028）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "pitcher_code",
+      "in": "query",
+      "description": "篩選：pitcher_code 等於此值（本事件之投手之業務碼（標準欄位 pitcher_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "batter_code",
+      "in": "query",
+      "description": "篩選：batter_code 等於此值（本事件之打者之業務碼（標準欄位 batter_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "catcher_code",
+      "in": "query",
+      "description": "篩選：catcher_code 等於此值（本事件之捕手之業務碼（標準欄位 catcher_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "batting_team_code",
+      "in": "query",
+      "description": "篩選：batting_team_code 等於此值（攻方隊伍之業務碼（標準欄位 batting_team_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "src_event_code",
+      "in": "query",
+      "description": "篩選：src_event_code 等於此值（業務碼（src_event_code））",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__event"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/event",
+         "total": 821,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "event_code": "TW-BBL-E-000003647",
+           "game_code": "TW-BBL-G-20260801-002",
+           "provider_code": "TW-PRV-000201",
+           "inning_number": 1,
+           "inning_half": "TOP",
+           "pa_key": "TW-BBL-G-20260801-002|1|TOP|1",
+           "event_seq": 3647,
+           "event_type": "PITCH",
+           "event_time": "2026-08-01T09:34:53+08:00",
+           "pitch_source": "HUMAN",
+           "pitcher_code": "TW-BBL-P-166415",
+           "pitcher_throws": "R",
+           "batter_code": "TW-BBL-P-356220",
+           "batter_side": "L",
+           "catcher_code": "TW-BBL-P-039090",
+           "batting_team_code": "TW-BBL-T-0902",
+           "pitch_no": 3.0,
+           "pitch_of_pa": 3.0,
+           "balls_before": 2.0,
+           "strikes_before": 0.0,
+           "outs_before": 0.0,
+           "runners_state": 0,
+           "event_result": "IN_PLAY",
+           "home_score_before": 0.0,
+           "away_score_before": 0.0,
+           "count_state": "CountsB",
+           "src_event_code": "In-Play",
+           "pa_result_src": "1B",
+           "raw_record_key": "game1.json#3647"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/fielding_play": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_fielding_play",
+    "summary": "FieldingPlay（守備事件）　107 筆",
+    "description": "Staging 表 `staging.baseball_game_fielding_play`（共 107 筆）。欄位定義依規範書資料典之 FieldingPlay 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `event_code,provider_code,fielding_seq`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-event_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "event_code",
+      "in": "query",
+      "description": "篩選：event_code 等於此值（所屬事件之業務碼（標準欄位 event_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "provider_code",
+      "in": "query",
+      "description": "篩選：provider_code 等於此值（判定本守備結果之來源之業務碼（標準欄位 provider_id 對外以業務碼表示）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__fielding_play"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/fielding_play",
+         "total": 107,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "event_code": "TW-BBL-E-000003647",
+           "provider_code": "TW-PRV-000201",
+           "fielding_seq": 1,
+           "landing_x_m": 20.43,
+           "landing_y_m": 64.46,
+           "bb_type": "GROUND_BALL",
+           "play_result_src": "1B"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/game": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_game",
+    "summary": "Game（比賽）　2 筆",
+    "description": "Staging 表 `staging.baseball_game_game`（共 2 筆）。欄位定義依規範書資料典之 Game 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `game_code,src_game_id,src_file`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-game_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "game_code",
+      "in": "query",
+      "description": "篩選：game_code 等於此值（比賽業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "home_team_code",
+      "in": "query",
+      "description": "篩選：home_team_code 等於此值（主隊之業務碼（標準欄位 home_team_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "away_team_code",
+      "in": "query",
+      "description": "篩選：away_team_code 等於此值（客隊之業務碼（標準欄位 away_team_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "game_no",
+      "in": "query",
+      "description": "篩選：game_no 等於此值（場次編號。同賽季唯一）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "event_category",
+      "in": "query",
+      "description": "篩選：event_category 等於此值（參賽組別。本場比賽所屬之參賽組別；代碼見代碼表 CL-014）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "description": "篩選：status 等於此值（比賽狀態。本場比賽之整體狀態；代碼見代碼表 CL-024）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__game"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/game",
+         "total": 2,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "game_code": "TW-BBL-G-20260801-001",
+           "src_game_id": "0ef2255d8ffd408cbbf1575adf181aee",
+           "src_file": "game2.json",
+           "home_team_code": "TW-BBL-T-0903",
+           "away_team_code": "TW-BBL-T-0904",
+           "game_no": "20260801-0",
+           "game_type": "E",
+           "event_category": "OTHER",
+           "status": "FINAL",
+           "scheduled_date": "2026-08-01",
+           "home_score": 18,
+           "away_score": 2,
+           "innings_played": 9.0,
+           "venue_name": "國家運動訓練中心棒球場"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/person": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_person",
+    "summary": "Person（人員）　69 筆",
+    "description": "Staging 表 `staging.baseball_game_person`（共 69 筆）。欄位定義依規範書資料典之 Person 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `person_code,src_id,team_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-person_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "person_code",
+      "in": "query",
+      "description": "篩選：person_code 等於此值（人員業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "team_code",
+      "in": "query",
+      "description": "篩選：team_code 等於此值（業務碼（team_code））",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__person"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/person",
+         "total": 69,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "person_code": "TW-BBL-P-166415",
+           "src_id": "7f6a0f165b6549c5b856f3df83a46803",
+           "team_code": "TW-BBL-T-0901",
+           "person_role": "PLAYER",
+           "player_level": "AMT",
+           "display_name": "A 隊 投手1",
+           "primary_position": "P",
+           "pitch_hand": "R",
+           "bat_side": "L"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/pitch_tracking": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_pitch_tracking",
+    "summary": "PitchTracking（投球量測）　631 筆",
+    "description": "Staging 表 `staging.baseball_game_pitch_tracking`（共 631 筆）。欄位定義依規範書資料典之 PitchTracking 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `event_code,provider_code,is_primary`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-event_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "event_code",
+      "in": "query",
+      "description": "篩選：event_code 等於此值（所屬事件之業務碼（標準欄位 event_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "provider_code",
+      "in": "query",
+      "description": "篩選：provider_code 等於此值（量測來源之業務碼（標準欄位 provider_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "pitch_type",
+      "in": "query",
+      "description": "篩選：pitch_type 等於此值（生效球種；代碼見代碼表 CL-004）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__pitch_tracking"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/pitch_tracking",
+         "total": 631,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "event_code": "TW-BBL-E-000003641",
+           "provider_code": "TW-PRV-000201",
+           "is_primary": true,
+           "measurement_quality": "NORMAL",
+           "pitch_type_tagged": "FC",
+           "pitch_type": "FC",
+           "release_speed_kmh": 83.2,
+           "zone_speed_kmh": 80.0,
+           "release_spin_rate_rpm": 1366.0,
+           "spin_axis_deg": 220.5,
+           "tilt": "07:21",
+           "spin_efficiency_pct": 36.0,
+           "active_spin_rate_rpm": 491.0,
+           "gyro_degree_deg": 21.10019602,
+           "release_pos_x_m": 0.168,
+           "release_pos_z_m": 1.832,
+           "extension_m": 2.346,
+           "induced_vert_break_cm": -9.6,
+           "horz_break_cm": -1.4,
+           "vert_rel_angle_deg": -16.44,
+           "plate_loc_x_m": 0.274,
+           "plate_loc_z_m": 0.199,
+           "in_zone": false,
+           "zone13": 14
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/plate_appearance": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_plate_appearance",
+    "summary": "PlateAppearance（打席）　162 筆",
+    "description": "Staging 表 `staging.baseball_game_plate_appearance`（共 162 筆）。欄位定義依規範書資料典之 PlateAppearance 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `pa_key,game_code,inning_number`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-pa_key`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "game_code",
+      "in": "query",
+      "description": "篩選：game_code 等於此值（所屬比賽之業務碼（標準欄位 game_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "batter_code",
+      "in": "query",
+      "description": "篩選：batter_code 等於此值（打席結果歸屬之打者之業務碼（標準欄位 batter_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "pitcher_code",
+      "in": "query",
+      "description": "篩選：pitcher_code 等於此值（打席結果歸屬之投手之業務碼（標準欄位 pitcher_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__plate_appearance"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/plate_appearance",
+         "total": 162,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "pa_key": "TW-BBL-G-20260801-001|1|TOP|1",
+           "game_code": "TW-BBL-G-20260801-001",
+           "inning_number": 1,
+           "inning_half": "TOP",
+           "pa_of_inning": 1,
+           "batter_code": "TW-BBL-P-752897",
+           "pitcher_code": "TW-BBL-P-630455",
+           "outs_at_start": 0.0,
+           "pa_result": "FIELD_OUT",
+           "is_at_bat": true,
+           "pitches": 6,
+           "pa_seq": 1
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/quality_issue": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_quality_issue",
+    "summary": "資料品質紀錄　573 筆",
+    "description": "Staging 表 `staging.baseball_game_quality_issue`（共 573 筆）。標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `source,rule,severity`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-source`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "rule",
+      "in": "query",
+      "description": "篩選：rule 等於此值（延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內）",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "severity",
+      "in": "query",
+      "description": "篩選：severity 等於此值（延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__quality_issue"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/quality_issue",
+         "total": 573,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "source": "baseball_game",
+           "rule": "CODE_GENERATED",
+           "severity": "INFO",
+           "entity": "Game",
+           "field": "game_code",
+           "raw_key": "0ef2255d8ffd408cbbf1575adf181aee",
+           "before": "20260801-0",
+           "after": "TW-BBL-G-20260801-001",
+           "note": "兩場比賽之來源場次編號（GameNo）相同，改以日期＋序號產生唯一業務碼"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/swing_tracking": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_swing_tracking",
+    "summary": "SwingTracking（揮棒擊球量測）　134 筆",
+    "description": "Staging 表 `staging.baseball_game_swing_tracking`（共 134 筆）。欄位定義依規範書資料典之 SwingTracking 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `event_code,provider_code,is_primary`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-event_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "event_code",
+      "in": "query",
+      "description": "篩選：event_code 等於此值（所屬事件之業務碼（標準欄位 event_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "provider_code",
+      "in": "query",
+      "description": "篩選：provider_code 等於此值（量測來源之業務碼（標準欄位 provider_id 對外以業務碼表示））",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__swing_tracking"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/swing_tracking",
+         "total": 134,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "event_code": "TW-BBL-E-000003705",
+           "provider_code": "TW-PRV-000201",
+           "is_primary": true,
+           "exit_speed_kmh": 145.2,
+           "launch_angle_deg": 17.5,
+           "spray_angle_deg": -27.7,
+           "est_distance_m": 68.4,
+           "tagged_hit_type": "LINE_DRIVE",
+           "tagged_hardness": "MEDIUM"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/baseball_game/team": {
+   "get": {
+    "tags": [
+     "棒球賽事（baseball_game）"
+    ],
+    "operationId": "get_baseball_game_team",
+    "summary": "Team（球隊）　4 筆",
+    "description": "Staging 表 `staging.baseball_game_team`（共 4 筆）。欄位定義依規範書資料典之 Team 實體；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。可用 `limit`／`offset` 分頁，以欄位名稱為參數篩選（等於）。",
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "description": "每頁筆數（1–1000，預設 100）",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 1000,
+       "default": 100
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "description": "略過筆數（分頁用，預設 0）",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "description": "只回傳指定欄位，以逗號分隔，如 `team_code,team_full_name,team_abbr`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "description": "排序欄位；前加 `-` 為由大到小，如 `-team_code`",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "team_code",
+      "in": "query",
+      "description": "篩選：team_code 等於此值（球隊業務碼）",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "查詢結果",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "dataset": {
+           "type": "string"
+          },
+          "total": {
+           "type": "integer",
+           "description": "符合條件之總筆數"
+          },
+          "limit": {
+           "type": "integer"
+          },
+          "offset": {
+           "type": "integer"
+          },
+          "items": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/baseball_game__team"
+           }
+          }
+         }
+        },
+        "example": {
+         "dataset": "baseball_game/team",
+         "total": 4,
+         "limit": 1,
+         "offset": 0,
+         "items": [
+          {
+           "team_code": "TW-BBL-T-0901",
+           "team_full_name": "A 隊",
+           "team_abbr": "A",
+           "league_level": null,
+           "src_team": "TeamA"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "securitySchemes": {
+   "APIKeyHeader": {
+    "type": "apiKey",
+    "in": "header",
+    "name": "X-API-Key"
+   }
+  },
+  "responses": {
+   "BadRequest": {
+    "description": "參數錯誤（未知之欄位、型別不符等）",
+    "content": {
+     "application/json": {
+      "example": {
+       "detail": "未知之篩選欄位：foo"
+      }
+     }
+    }
+   },
+   "Unauthorized": {
+    "description": "未提供或無效之 API 金鑰",
+    "content": {
+     "application/json": {
+      "example": {
+       "detail": "未提供或無效之 API 金鑰（標頭 X-API-Key）"
+      }
+     }
+    }
+   },
+   "TooMany": {
+    "description": "超過流量上限",
+    "content": {
+     "application/json": {
+      "example": {
+       "detail": "已超過每分鐘 60 次之流量上限，請於 12 秒後再試"
+      }
+     }
+    }
+   }
+  },
+  "schemas": {
+   "baseball_game__data_provider": {
+    "type": "object",
+    "description": "對應標準實體 DataProvider（資料提供者）。",
+    "properties": {
+     "provider_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "提供者業務碼"
+     },
+     "provider_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "供應商正式名稱或統一編號"
+     },
+     "provider_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "提供者類型。資料來源之角色分類"
+     }
+    }
+   },
+   "baseball_game__event": {
+    "type": "object",
+    "description": "對應標準實體 Event（比賽事件）。設計說明：本實體為本標準架構之核心，採事實與量測分離之設計。一次投球所產生的資料有兩種性質：一是比賽事實（第幾局、幾好幾壞、結果為何），二是儀器量測值（球速、轉速、進壘點）。事實只有一個版本；量測值則可能同時來自多家設備（如 Trackman 與 Hawk-Eye），且數值互有差異。若混置於同一實體，同一球僅能存一組量測值，等於逼使系統在寫入時就擇一捨棄，被捨棄的那一組即永久遺失。本標準因此將事實置於本實體（由主來源建立一筆），量測值另置於 PitchTracking／SwingTracking／EventPlayerTracking（各來源並存）。本實體並得掛於 Session 以承接訓練情",
+    "properties": {
+     "event_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "事件識別碼之業務碼（標準欄位 event_id 對外以業務碼表示）"
+     },
+     "game_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬比賽之業務碼（標準欄位 game_id 對外以業務碼表示）"
+     },
+     "provider_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "建立本事件事實之主來源之業務碼（標準欄位 provider_id 對外以業務碼表示）"
+     },
+     "inning_number": {
+      "type": "integer",
+      "nullable": true,
+      "description": "局次。事件發生之局次"
+     },
+     "inning_half": {
+      "type": "string",
+      "nullable": true,
+      "description": "上／下半局。事件發生之半局"
+     },
+     "pa_key": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "event_seq": {
+      "type": "integer",
+      "nullable": true,
+      "description": "事件在打席（或課次）內之先後順序"
+     },
+     "event_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "事件類型；代碼見代碼表 CL-028"
+     },
+     "event_time": {
+      "type": "string",
+      "nullable": true,
+      "description": "事件發生時間"
+     },
+     "pitch_source": {
+      "type": "string",
+      "nullable": true,
+      "description": "投球來源。本球之投出方式；代碼見代碼表 CL-018"
+     },
+     "pitcher_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "本事件之投手之業務碼（標準欄位 pitcher_id 對外以業務碼表示）"
+     },
+     "pitcher_throws": {
+      "type": "string",
+      "nullable": true,
+      "description": "投球慣用手。事件當下快照"
+     },
+     "batter_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "本事件之打者之業務碼（標準欄位 batter_id 對外以業務碼表示）"
+     },
+     "batter_side": {
+      "type": "string",
+      "nullable": true,
+      "description": "打擊站位。事件當下之實際站位"
+     },
+     "catcher_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "本事件之捕手之業務碼（標準欄位 catcher_id 對外以業務碼表示）"
+     },
+     "batting_team_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "攻方隊伍之業務碼（標準欄位 batting_team_id 對外以業務碼表示）"
+     },
+     "pitch_no": {
+      "type": "number",
+      "nullable": true,
+      "description": "該投手本場（本課次）累積投球數"
+     },
+     "pitch_of_pa": {
+      "type": "number",
+      "nullable": true,
+      "description": "該打席之第幾球"
+     },
+     "balls_before": {
+      "type": "number",
+      "nullable": true,
+      "description": "事件發生前之壞球數"
+     },
+     "strikes_before": {
+      "type": "number",
+      "nullable": true,
+      "description": "事件發生前之好球數"
+     },
+     "outs_before": {
+      "type": "number",
+      "nullable": true,
+      "description": "事件發生前之出局數"
+     },
+     "runners_state": {
+      "type": "integer",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "event_result": {
+      "type": "string",
+      "nullable": true,
+      "description": "事件結果；代碼見代碼表 CL-029"
+     },
+     "home_score_before": {
+      "type": "number",
+      "nullable": true,
+      "description": "事件發生前之主隊得分"
+     },
+     "away_score_before": {
+      "type": "number",
+      "nullable": true,
+      "description": "事件發生前之客隊得分"
+     },
+     "count_state": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "src_event_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "業務碼（src_event_code）"
+     },
+     "pa_result_src": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "raw_record_key": {
+      "type": "string",
+      "nullable": true,
+      "description": "該原始物件內對應本事件之識別碼"
+     }
+    }
+   },
+   "baseball_game__fielding_play": {
+    "type": "object",
+    "description": "對應標準實體 FieldingPlay（守備事件）。",
+    "properties": {
+     "event_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬事件之業務碼（標準欄位 event_id 對外以業務碼表示）"
+     },
+     "provider_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "判定本守備結果之來源之業務碼（標準欄位 provider_id 對外以業務碼表示）"
+     },
+     "fielding_seq": {
+      "type": "integer",
+      "nullable": true,
+      "description": "守備動作序號。同一事件內之先後順序"
+     },
+     "landing_x_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "落點座標。本壘板尖端為原點，右為正（單位：m）"
+     },
+     "landing_y_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "落點座標。指向投手丘為正（單位：m）"
+     },
+     "bb_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "擊球型態；代碼見代碼表 CL-007"
+     },
+     "play_result_src": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "baseball_game__game": {
+    "type": "object",
+    "description": "對應標準實體 Game（比賽）。",
+    "properties": {
+     "game_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "比賽業務碼"
+     },
+     "src_game_id": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "src_file": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "home_team_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "主隊之業務碼（標準欄位 home_team_id 對外以業務碼表示）"
+     },
+     "away_team_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "客隊之業務碼（標準欄位 away_team_id 對外以業務碼表示）"
+     },
+     "game_no": {
+      "type": "string",
+      "nullable": true,
+      "description": "場次編號。同賽季唯一"
+     },
+     "game_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "比賽類型；代碼見代碼表 CL-002"
+     },
+     "event_category": {
+      "type": "string",
+      "nullable": true,
+      "description": "參賽組別。本場比賽所屬之參賽組別；代碼見代碼表 CL-014"
+     },
+     "status": {
+      "type": "string",
+      "nullable": true,
+      "description": "比賽狀態。本場比賽之整體狀態；代碼見代碼表 CL-024"
+     },
+     "scheduled_date": {
+      "type": "string",
+      "nullable": true,
+      "description": "排定比賽日"
+     },
+     "home_score": {
+      "type": "integer",
+      "nullable": true,
+      "description": "主隊最終得分"
+     },
+     "away_score": {
+      "type": "integer",
+      "nullable": true,
+      "description": "客隊最終得分"
+     },
+     "innings_played": {
+      "type": "number",
+      "nullable": true,
+      "description": "實際進行局數"
+     },
+     "venue_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "baseball_game__person": {
+    "type": "object",
+    "description": "對應標準實體 Person（人員）。設計說明：裁判、教練、工作人員與球員同為「人」，故以 Person 為上位實體統一承載，不另設球員、裁判等平行實體；球員專屬欄位（守備位置、投打習慣等）改為條件式必填，由 person_role 決定。此設計使同一人兼任多重角色（球員兼教練、退役轉任裁判）時無須重複建檔，亦避免同一人在不同實體中出現不一致的基本資料。",
+    "properties": {
+     "person_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "人員業務碼"
+     },
+     "src_id": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "team_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "業務碼（team_code）"
+     },
+     "person_role": {
+      "type": "string",
+      "nullable": true,
+      "description": "人員角色。本筆人員之主要身分"
+     },
+     "player_level": {
+      "type": "string",
+      "nullable": true,
+      "description": "選手層級；代碼見代碼表 CL-001"
+     },
+     "display_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "primary_position": {
+      "type": "string",
+      "nullable": true,
+      "description": "常用守備位置代碼。僅供描述；代碼見代碼表 CL-003"
+     },
+     "pitch_hand": {
+      "type": "string",
+      "nullable": true,
+      "description": "投球慣用手"
+     },
+     "bat_side": {
+      "type": "string",
+      "nullable": true,
+      "description": "打擊慣用側"
+     }
+    }
+   },
+   "baseball_game__pitch_tracking": {
+    "type": "object",
+    "description": "對應標準實體 PitchTracking（投球量測）。設計說明：承接投球端之量測欄位。同一事件之各量測來源各存一筆，不於寫入時擇一；對外顯示之基準來源以 is_primary 標示，其值由 GameDataSource.priority 推導，不另人工指定，以免同一場比賽出現互相矛盾的主來源判定。",
+    "properties": {
+     "event_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬事件之業務碼（標準欄位 event_id 對外以業務碼表示）"
+     },
+     "provider_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "量測來源之業務碼（標準欄位 provider_id 對外以業務碼表示）"
+     },
+     "is_primary": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "是否為本事件對外顯示之基準來源"
+     },
+     "measurement_quality": {
+      "type": "string",
+      "nullable": true,
+      "description": "量測品質標記"
+     },
+     "pitch_type_tagged": {
+      "type": "string",
+      "nullable": true,
+      "description": "人工標記球種；代碼見代碼表 CL-004"
+     },
+     "pitch_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "生效球種；代碼見代碼表 CL-004"
+     },
+     "release_speed_kmh": {
+      "type": "number",
+      "nullable": true,
+      "description": "出手速度。投球出手瞬間之球速（單位：km/h）"
+     },
+     "zone_speed_kmh": {
+      "type": "number",
+      "nullable": true,
+      "description": "進壘末速（單位：km/h）"
+     },
+     "release_spin_rate_rpm": {
+      "type": "number",
+      "nullable": true,
+      "description": "出手轉速。出手後之自轉速度（單位：rpm）"
+     },
+     "spin_axis_deg": {
+      "type": "number",
+      "nullable": true,
+      "description": "轉軸角度（單位：deg）"
+     },
+     "tilt": {
+      "type": "string",
+      "nullable": true,
+      "description": "旋轉傾角。以時鐘制表示"
+     },
+     "spin_efficiency_pct": {
+      "type": "number",
+      "nullable": true,
+      "description": "旋轉效率（單位：%）"
+     },
+     "active_spin_rate_rpm": {
+      "type": "number",
+      "nullable": true,
+      "description": "有效旋轉速率。扣除陀螺分量後（單位：rpm）"
+     },
+     "gyro_degree_deg": {
+      "type": "number",
+      "nullable": true,
+      "description": "陀螺旋轉角（單位：deg）"
+     },
+     "release_pos_x_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "出手點座標。本壘板尖端為原點，右為正（單位：m）"
+     },
+     "release_pos_z_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "出手點高度。自地面起算（單位：m）"
+     },
+     "extension_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "出手延伸。出手點距投手板之距離（單位：m）"
+     },
+     "induced_vert_break_cm": {
+      "type": "number",
+      "nullable": true,
+      "description": "淨垂直位移。已扣除重力（單位：cm）"
+     },
+     "horz_break_cm": {
+      "type": "number",
+      "nullable": true,
+      "description": "水平位移（單位：cm）"
+     },
+     "vert_rel_angle_deg": {
+      "type": "number",
+      "nullable": true,
+      "description": "垂直出手角度（單位：deg）"
+     },
+     "plate_loc_x_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "通過本壘板平面時之水平位置（單位：m）"
+     },
+     "plate_loc_z_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "進壘高度。自地面起算（單位：m）"
+     },
+     "in_zone": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "zone13": {
+      "type": "integer",
+      "nullable": true,
+      "description": "進壘位置十三宮格代號"
+     }
+    }
+   },
+   "baseball_game__plate_appearance": {
+    "type": "object",
+    "description": "對應標準實體 PlateAppearance（打席）。設計說明：命名採打席（Plate Appearance）而非打數（At Bat）：四壞保送、犧牲打等計為打席但不計入打數，以打數命名將使統計語意混淆。本實體僅適用於比賽情境；訓練情境之事件直接掛於 Session，不產生打席。",
+    "properties": {
+     "pa_key": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "game_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬比賽之業務碼（標準欄位 game_id 對外以業務碼表示）"
+     },
+     "inning_number": {
+      "type": "integer",
+      "nullable": true,
+      "description": "局次"
+     },
+     "inning_half": {
+      "type": "string",
+      "nullable": true,
+      "description": "上／下半局"
+     },
+     "pa_of_inning": {
+      "type": "integer",
+      "nullable": true,
+      "description": "該半局之第幾個打席"
+     },
+     "batter_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "打席結果歸屬之打者之業務碼（標準欄位 batter_id 對外以業務碼表示）"
+     },
+     "pitcher_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "打席結果歸屬之投手之業務碼（標準欄位 pitcher_id 對外以業務碼表示）"
+     },
+     "outs_at_start": {
+      "type": "number",
+      "nullable": true,
+      "description": "打席開始當下之出局數"
+     },
+     "pa_result": {
+      "type": "string",
+      "nullable": true,
+      "description": "打席最終結果；代碼見代碼表 CL-005"
+     },
+     "is_at_bat": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "是否計入打數"
+     },
+     "pitches": {
+      "type": "integer",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "pa_seq": {
+      "type": "integer",
+      "nullable": true,
+      "description": "打席在該場比賽中之先後順序"
+     }
+    }
+   },
+   "baseball_game__quality_issue": {
+    "type": "object",
+    "description": "資料品質紀錄：清整過程中發現與處理之問題（規則、嚴重度、原值、處理後之值、說明）。",
+    "properties": {
+     "source": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "rule": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "severity": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "entity": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "field": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "raw_key": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "before": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "after": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "note": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "baseball_game__swing_tracking": {
+    "type": "object",
+    "description": "對應標準實體 SwingTracking（揮棒擊球量測）。設計說明：承接打擊端之量測欄位，含比賽情境下之揮棒機制量測。一次揮棒一筆，揮空時擊球相關欄位留空、不另拆表——揮棒與擊球為同一動作之連續過程，拆表將使揮空事件無處歸屬。",
+    "properties": {
+     "event_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬事件之業務碼（標準欄位 event_id 對外以業務碼表示）"
+     },
+     "provider_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "量測來源之業務碼（標準欄位 provider_id 對外以業務碼表示）"
+     },
+     "is_primary": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "是否為本事件對外顯示之基準來源"
+     },
+     "exit_speed_kmh": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球初速（單位：km/h）"
+     },
+     "launch_angle_deg": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球仰角（單位：deg）"
+     },
+     "spray_angle_deg": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球水平方向角。右正左負（單位：deg）"
+     },
+     "est_distance_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "預估飛行距離（單位：m）"
+     },
+     "tagged_hit_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "人工標記擊球型態；代碼見代碼表 CL-007"
+     },
+     "tagged_hardness": {
+      "type": "string",
+      "nullable": true,
+      "description": "人工標記擊球強度"
+     }
+    }
+   },
+   "baseball_game__team": {
+    "type": "object",
+    "description": "對應標準實體 Team（球隊）。",
+    "properties": {
+     "team_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "球隊業務碼"
+     },
+     "team_full_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "球隊正式中文全名"
+     },
+     "team_abbr": {
+      "type": "string",
+      "nullable": true,
+      "description": "球隊英文縮寫"
+     },
+     "league_level": {
+      "type": "string",
+      "nullable": true,
+      "description": "球隊常態出賽級別。僅供描述與篩選；代碼見代碼表 CL-001"
+     },
+     "src_team": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "badminton_tournament__match": {
+    "type": "object",
+    "description": "對應標準實體 Match（單場對戰）。",
+    "properties": {
+     "match_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "單場對戰業務碼"
+     },
+     "tournament_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬賽事之業務碼（標準欄位 tournament_id 對外以業務碼表示）"
+     },
+     "match_date": {
+      "type": "string",
+      "nullable": true,
+      "description": "比賽日期。本場比賽實際舉行日期"
+     },
+     "venue_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "比賽場地之業務碼（標準欄位 venue_id 對外以業務碼表示）"
+     },
+     "start_time": {
+      "type": "string",
+      "nullable": true,
+      "description": "開賽時間。本場比賽實際開始時間"
+     },
+     "round_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "輪次。賽事輪次或籤位（如32強、準決賽、決賽）"
+     },
+     "event_category": {
+      "type": "string",
+      "nullable": true,
+      "description": "參賽組別。本場比賽所屬之參賽組別；代碼見代碼表 CL-B05"
+     },
+     "stage": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "match_no": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "discipline": {
+      "type": "string",
+      "nullable": true,
+      "description": "競賽類別。本場比賽所屬競賽類別"
+     },
+     "event": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_a_player_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "甲方選手之業務碼（標準欄位 side_a_player_id 對外以業務碼表示）"
+     },
+     "side_b_player_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "乙方選手之業務碼（標準欄位 side_b_player_id 對外以業務碼表示）"
+     },
+     "side_a_pair_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "甲方配對之業務碼（標準欄位 side_a_pair_id 對外以業務碼表示）"
+     },
+     "side_b_pair_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "乙方配對之業務碼（標準欄位 side_b_pair_id 對外以業務碼表示）"
+     },
+     "side_a_p1": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_a_p2": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_b_p1": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_b_p2": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_a_team": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_b_team": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_a_seed": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_b_seed": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "status": {
+      "type": "string",
+      "nullable": true,
+      "description": "比賽狀態。本場比賽之最終狀態；代碼見代碼表 CL-B06"
+     },
+     "duration_min": {
+      "type": "number",
+      "nullable": true,
+      "description": "對戰時長（分鐘）。本場比賽實際進行時長（單位：min）"
+     },
+     "games_won_a": {
+      "type": "number",
+      "nullable": true,
+      "description": "甲方局數。甲方（或甲配對）獲勝局數"
+     },
+     "games_won_b": {
+      "type": "number",
+      "nullable": true,
+      "description": "乙方局數。乙方（或乙配對）獲勝局數"
+     },
+     "winner_side": {
+      "type": "string",
+      "nullable": true,
+      "description": "勝方。本場比賽最終獲勝之一方"
+     },
+     "score_text": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "raw_object_ref": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "badminton_tournament__match_game": {
+    "type": "object",
+    "description": "對應標準實體 MatchGame（局）。設計說明：原設計 Match 僅記錄 games_won_a／games_won_b（總局數），未記錄逐局實際比分（如 21-18、15-21、21-19），新增本實體介於 Match 與 Rally 之間，形成 Match → MatchGame（局） → Rally(回合) 三層結構。",
+    "properties": {
+     "match_game_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "局業務碼"
+     },
+     "match_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬比賽之業務碼（標準欄位 match_id 對外以業務碼表示）"
+     },
+     "game_no": {
+      "type": "integer",
+      "nullable": true,
+      "description": "局數。本局為該場比賽第幾局"
+     },
+     "score_a_final": {
+      "type": "integer",
+      "nullable": true,
+      "description": "甲方本局最終比分"
+     },
+     "score_b_final": {
+      "type": "integer",
+      "nullable": true,
+      "description": "乙方本局最終比分"
+     }
+    }
+   },
+   "badminton_tournament__organization": {
+    "type": "object",
+    "description": "對應標準實體 Organization（組織）。",
+    "properties": {
+     "org_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "組織業務碼。對外顯示與交換用之可讀識別碼"
+     },
+     "org_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "組織名稱。組織正式中文名稱"
+     },
+     "org_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "組織類型。本組織之性質分類"
+     },
+     "bwf_affiliated": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "是否 BWF 會員。是否為世界羽球總會正式會員協會"
+     },
+     "sport_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "運動代碼。羽球固定為 BDM；代碼見代碼表 CL-000"
+     }
+    }
+   },
+   "badminton_tournament__pair": {
+    "type": "object",
+    "description": "對應標準實體 Pair（雙打配對）。設計說明：IPTC Sport Schema 之 Membership／TeamMembership 概念處理選手與球隊間之長期隸屬關係，未涵蓋兩位選手臨時組成搭檔之情形，故本標準自行設計 Pair 實體，獨立於 Membership 架構之外，並允許同一選手同時關聯多個 Pair。",
+    "properties": {
+     "pair_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "雙打配對業務碼"
+     },
+     "player_a_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "選手甲之業務碼（標準欄位 player_a_id 對外以業務碼表示）"
+     },
+     "player_b_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "選手乙之業務碼（標準欄位 player_b_id 對外以業務碼表示）"
+     },
+     "discipline": {
+      "type": "string",
+      "nullable": true,
+      "description": "雙打類別。此配對所屬之雙打競賽類別"
+     }
+    }
+   },
+   "badminton_tournament__person": {
+    "type": "object",
+    "description": "對應標準實體 Person（人員）。",
+    "properties": {
+     "person_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "人員業務碼"
+     },
+     "full_name_zh": {
+      "type": "string",
+      "nullable": true,
+      "description": "選手姓名。選手中文姓名"
+     },
+     "person_role": {
+      "type": "string",
+      "nullable": true,
+      "description": "人員角色。本筆人員之主要身分"
+     },
+     "teams": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "badminton_tournament__quality_issue": {
+    "type": "object",
+    "description": "資料品質紀錄：清整過程中發現與處理之問題（規則、嚴重度、原值、處理後之值、說明）。",
+    "properties": {
+     "source": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "rule": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "severity": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "entity": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "field": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "raw_key": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "before": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "after": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "note": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "badminton_tournament__tournament": {
+    "type": "object",
+    "description": "對應標準實體 Tournament（賽事）。設計說明：一場賽事（如：全國羽球錦標賽）下轄多場 Match，正規化為獨立實體，避免賽事名稱／等級等屬性於每場 Match 重複儲存。",
+    "properties": {
+     "tournament_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "賽事業務碼"
+     },
+     "tournament_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "賽事名稱。賽事正式中文名稱"
+     },
+     "tier": {
+      "type": "string",
+      "nullable": true,
+      "description": "賽事等級。賽事積分系列層級"
+     },
+     "host_org_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "主辦單位之業務碼（標準欄位 host_org_id 對外以業務碼表示）"
+     },
+     "host_org": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "venue_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "業務碼（venue_code）"
+     },
+     "venue_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "start_date": {
+      "type": "string",
+      "nullable": true,
+      "description": "賽事起始日期"
+     },
+     "end_date": {
+      "type": "string",
+      "nullable": true,
+      "description": "賽事結束日期"
+     },
+     "expected_matches": {
+      "type": "integer",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "badminton_tournament__venue": {
+    "type": "object",
+    "description": "對應標準實體 Venue（場館）。設計說明：與棒球標準共用同一套 Venue 設計原則，參照 MLBAM GUMBO gameData.venue 節點與 schema.org StadiumOrArena 之屬性設計；場地尺寸則改依 BWF Laws of Badminton 之規範。",
+    "properties": {
+     "venue_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "場館業務碼"
+     },
+     "venue_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "場館名稱。場館正式中文名稱"
+     },
+     "venue_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "場館類型。本場館之性質分類"
+     },
+     "city_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "縣市代碼。場館所在縣市行政代碼"
+     }
+    }
+   },
+   "badminton_shuttleset__match": {
+    "type": "object",
+    "description": "對應標準實體 Match（單場對戰）。",
+    "properties": {
+     "match_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "單場對戰業務碼"
+     },
+     "tournament_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬賽事之業務碼（標準欄位 tournament_id 對外以業務碼表示）"
+     },
+     "match_date": {
+      "type": "string",
+      "nullable": true,
+      "description": "比賽日期。本場比賽實際舉行日期"
+     },
+     "round_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "輪次。賽事輪次或籤位（如32強、準決賽、決賽）"
+     },
+     "discipline": {
+      "type": "string",
+      "nullable": true,
+      "description": "競賽類別。本場比賽所屬競賽類別"
+     },
+     "status": {
+      "type": "string",
+      "nullable": true,
+      "description": "比賽狀態。本場比賽之最終狀態；代碼見代碼表 CL-B06"
+     },
+     "side_a_player_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "甲方選手之業務碼（標準欄位 side_a_player_id 對外以業務碼表示）"
+     },
+     "side_b_player_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "乙方選手之業務碼（標準欄位 side_b_player_id 對外以業務碼表示）"
+     },
+     "duration_min": {
+      "type": "integer",
+      "nullable": true,
+      "description": "對戰時長（分鐘）。本場比賽實際進行時長（單位：min）"
+     },
+     "games_won_a": {
+      "type": "integer",
+      "nullable": true,
+      "description": "甲方局數。甲方（或甲配對）獲勝局數"
+     },
+     "games_won_b": {
+      "type": "integer",
+      "nullable": true,
+      "description": "乙方局數。乙方（或乙配對）獲勝局數"
+     },
+     "winner_side": {
+      "type": "string",
+      "nullable": true,
+      "description": "勝方。本場比賽最終獲勝之一方"
+     },
+     "video_uri": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_a_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "side_b_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "badminton_shuttleset__match_game": {
+    "type": "object",
+    "description": "對應標準實體 MatchGame（局）。設計說明：原設計 Match 僅記錄 games_won_a／games_won_b（總局數），未記錄逐局實際比分（如 21-18、15-21、21-19），新增本實體介於 Match 與 Rally 之間，形成 Match → MatchGame（局） → Rally(回合) 三層結構。",
+    "properties": {
+     "match_game_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "局業務碼"
+     },
+     "match_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬比賽之業務碼（標準欄位 match_id 對外以業務碼表示）"
+     },
+     "game_no": {
+      "type": "integer",
+      "nullable": true,
+      "description": "局數。本局為該場比賽第幾局"
+     },
+     "score_a_final": {
+      "type": "integer",
+      "nullable": true,
+      "description": "甲方本局最終比分"
+     },
+     "score_b_final": {
+      "type": "integer",
+      "nullable": true,
+      "description": "乙方本局最終比分"
+     }
+    }
+   },
+   "badminton_shuttleset__person": {
+    "type": "object",
+    "description": "對應標準實體 Person（人員）。",
+    "properties": {
+     "person_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "人員業務碼"
+     },
+     "full_name_en": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "full_name_zh": {
+      "type": "string",
+      "nullable": true,
+      "description": "選手姓名。選手中文姓名"
+     },
+     "person_role": {
+      "type": "string",
+      "nullable": true,
+      "description": "人員角色。本筆人員之主要身分"
+     },
+     "player_level": {
+      "type": "string",
+      "nullable": true,
+      "description": "選手層級。選手所屬競技層級，含一般社會大眾；代碼見代碼表 CL-B01"
+     }
+    }
+   },
+   "badminton_shuttleset__quality_issue": {
+    "type": "object",
+    "description": "資料品質紀錄：清整過程中發現與處理之問題（規則、嚴重度、原值、處理後之值、說明）。",
+    "properties": {
+     "source": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "rule": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "severity": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "entity": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "field": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "raw_key": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "before": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "after": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "note": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "badminton_shuttleset__rally": {
+    "type": "object",
+    "description": "對應標準實體 Rally（回合）。設計說明：羽球之動作層級為「比賽→回合→擊球」，較棒球多一層。此一層級之欄位設計，參照國立陽明交通大學 ShuttleSet22 資料集（arXiv:2306.15664）之逐拍欄位格式（rally、ball round、round score）。",
+    "properties": {
+     "rally_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "回合業務碼"
+     },
+     "match_game_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬局之業務碼（標準欄位 match_game_id 對外以業務碼表示）"
+     },
+     "match_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "業務碼（match_code）"
+     },
+     "rally_seq": {
+      "type": "integer",
+      "nullable": true,
+      "description": "回合序號。本局（訓練情境為本課次）內第幾個回合"
+     },
+     "score_a": {
+      "type": "integer",
+      "nullable": true,
+      "description": "甲方當前比分。本回合發生時甲方之比分"
+     },
+     "score_b": {
+      "type": "integer",
+      "nullable": true,
+      "description": "乙方當前比分。本回合發生時乙方之比分"
+     },
+     "win_reason": {
+      "type": "string",
+      "nullable": true,
+      "description": "回合結束原因。本回合結束之原因代碼；代碼見代碼表 CL-B03"
+     },
+     "point_to": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "shots": {
+      "type": "integer",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   },
+   "badminton_shuttleset__shot": {
+    "type": "object",
+    "description": "對應標準實體 Shot（擊球）。設計說明：欄位分三級標註來源權威程度——學術標註（球種、落點、位置）、技術可測惟規格未公開之預留欄位（球速），以及不適用欄位（不建立）。",
+    "properties": {
+     "shot_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "擊球業務碼"
+     },
+     "rally_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "所屬回合之業務碼（標準欄位 rally_id 對外以業務碼表示）"
+     },
+     "match_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "業務碼（match_code）"
+     },
+     "game_no": {
+      "type": "integer",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "person_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "擊球選手之業務碼（標準欄位 person_id 對外以業務碼表示）"
+     },
+     "side": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "shot_seq": {
+      "type": "integer",
+      "nullable": true,
+      "description": "擊球序號。本次擊球於所屬回合內之序號"
+     },
+     "shot_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "球種。本次擊球之動作分類；代碼見代碼表 CL-B02"
+     },
+     "shot_type_src": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "landing_x_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "落點座標之 X 軸（沿球網方向）。羽球落點於球場座標系統之位置（單位：m）"
+     },
+     "landing_y_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "落點座標之 Y 軸（沿場地長度方向）。羽球落點於球場座標系統之位置（單位：m）"
+     },
+     "landing_height": {
+      "type": "string",
+      "nullable": true,
+      "description": "落點高低。落點相對球網之高低標記"
+     },
+     "is_around_head": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "是否繞頭擊球。本次擊球是否為繞頭動作"
+     },
+     "backhand": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "是否反手擊球"
+     },
+     "is_winner": {
+      "type": "boolean",
+      "nullable": true,
+      "description": "是否致勝球。本次擊球是否直接終結本回合並得分"
+     },
+     "error_type": {
+      "type": "string",
+      "nullable": true,
+      "description": "失誤類型。若本次擊球為失誤，其原因分類；非失誤球則留空"
+     },
+     "video_frame_no": {
+      "type": "integer",
+      "nullable": true,
+      "description": "影片幀號。本次擊球於對應影片中之幀序號"
+     },
+     "video_time": {
+      "type": "string",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     },
+     "landing_area": {
+      "type": "number",
+      "nullable": true,
+      "description": "落點區域。羽球落點所在之場區代碼"
+     },
+     "hit_x_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球點座標之 X 軸（沿球網方向）。擊球瞬間羽球於球場平面之投影位置（單位：m）"
+     },
+     "hit_y_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球點座標之 Y 軸（沿場地長度方向）。擊球瞬間羽球於球場平面之投影位置（單位：m）"
+     },
+     "hit_area": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球區域。擊球點所在之場區代碼"
+     },
+     "player_x_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球者位置之 X 軸。擊球瞬間擊球者慣用腳於球場平面之位置（單位：m）"
+     },
+     "player_y_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球者位置之 Y 軸。擊球瞬間擊球者慣用腳於球場平面之位置（單位：m）"
+     },
+     "player_area": {
+      "type": "number",
+      "nullable": true,
+      "description": "擊球者區域。擊球瞬間擊球者所在之場區代碼"
+     },
+     "opponent_x_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "接球方位置之 X 軸。擊球瞬間準備回擊本球之對手於球場平面之位置（單位：m）"
+     },
+     "opponent_y_m": {
+      "type": "number",
+      "nullable": true,
+      "description": "接球方位置之 Y 軸。擊球瞬間準備回擊本球之對手於球場平面之位置（單位：m）"
+     },
+     "opponent_area": {
+      "type": "number",
+      "nullable": true,
+      "description": "接球方區域。擊球瞬間接球方所在之場區代碼"
+     },
+     "provider_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "資料提供者之業務碼（標準欄位 provider_id 對外以業務碼表示）"
+     }
+    }
+   },
+   "badminton_shuttleset__tournament": {
+    "type": "object",
+    "description": "對應標準實體 Tournament（賽事）。設計說明：一場賽事（如：全國羽球錦標賽）下轄多場 Match，正規化為獨立實體，避免賽事名稱／等級等屬性於每場 Match 重複儲存。",
+    "properties": {
+     "tournament_code": {
+      "type": "string",
+      "nullable": true,
+      "description": "賽事業務碼"
+     },
+     "tournament_name": {
+      "type": "string",
+      "nullable": true,
+      "description": "賽事名稱。賽事正式中文名稱"
+     },
+     "tier": {
+      "type": "string",
+      "nullable": true,
+      "description": "賽事等級。賽事積分系列層級"
+     },
+     "year": {
+      "type": "integer",
+      "nullable": true,
+      "description": "延伸欄位（非標準）：來源追溯或分析輔助用，不在資料典之內",
+      "x-standard": false
+     }
+    }
+   }
+  }
+ },
+ "x-catalog": [
+  {
+   "dataset": "baseball_game/data_provider",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "data_provider",
+   "entity": "DataProvider",
+   "label": "DataProvider（資料提供者）",
+   "rows": 1,
+   "columns": [
+    "provider_code",
+    "provider_name",
+    "provider_type"
+   ],
+   "filters": [
+    "provider_code"
+   ]
+  },
+  {
+   "dataset": "baseball_game/event",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "event",
+   "entity": "Event",
+   "label": "Event（比賽事件）",
+   "rows": 821,
+   "columns": [
+    "event_code",
+    "game_code",
+    "provider_code",
+    "inning_number",
+    "inning_half",
+    "pa_key",
+    "event_seq",
+    "event_type",
+    "event_time",
+    "pitch_source",
+    "pitcher_code",
+    "pitcher_throws",
+    "batter_code",
+    "batter_side",
+    "catcher_code",
+    "batting_team_code",
+    "pitch_no",
+    "pitch_of_pa",
+    "balls_before",
+    "strikes_before",
+    "outs_before",
+    "runners_state",
+    "event_result",
+    "home_score_before",
+    "away_score_before",
+    "count_state",
+    "src_event_code",
+    "pa_result_src",
+    "raw_record_key"
+   ],
+   "filters": [
+    "event_code",
+    "game_code",
+    "provider_code",
+    "event_type",
+    "pitcher_code",
+    "batter_code",
+    "catcher_code",
+    "batting_team_code",
+    "src_event_code"
+   ]
+  },
+  {
+   "dataset": "baseball_game/fielding_play",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "fielding_play",
+   "entity": "FieldingPlay",
+   "label": "FieldingPlay（守備事件）",
+   "rows": 107,
+   "columns": [
+    "event_code",
+    "provider_code",
+    "fielding_seq",
+    "landing_x_m",
+    "landing_y_m",
+    "bb_type",
+    "play_result_src"
+   ],
+   "filters": [
+    "event_code",
+    "provider_code"
+   ]
+  },
+  {
+   "dataset": "baseball_game/game",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "game",
+   "entity": "Game",
+   "label": "Game（比賽）",
+   "rows": 2,
+   "columns": [
+    "game_code",
+    "src_game_id",
+    "src_file",
+    "home_team_code",
+    "away_team_code",
+    "game_no",
+    "game_type",
+    "event_category",
+    "status",
+    "scheduled_date",
+    "home_score",
+    "away_score",
+    "innings_played",
+    "venue_name"
+   ],
+   "filters": [
+    "game_code",
+    "home_team_code",
+    "away_team_code",
+    "game_no",
+    "event_category",
+    "status"
+   ]
+  },
+  {
+   "dataset": "baseball_game/person",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "person",
+   "entity": "Person",
+   "label": "Person（人員）",
+   "rows": 69,
+   "columns": [
+    "person_code",
+    "src_id",
+    "team_code",
+    "person_role",
+    "player_level",
+    "display_name",
+    "primary_position",
+    "pitch_hand",
+    "bat_side"
+   ],
+   "filters": [
+    "person_code",
+    "team_code"
+   ]
+  },
+  {
+   "dataset": "baseball_game/pitch_tracking",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "pitch_tracking",
+   "entity": "PitchTracking",
+   "label": "PitchTracking（投球量測）",
+   "rows": 631,
+   "columns": [
+    "event_code",
+    "provider_code",
+    "is_primary",
+    "measurement_quality",
+    "pitch_type_tagged",
+    "pitch_type",
+    "release_speed_kmh",
+    "zone_speed_kmh",
+    "release_spin_rate_rpm",
+    "spin_axis_deg",
+    "tilt",
+    "spin_efficiency_pct",
+    "active_spin_rate_rpm",
+    "gyro_degree_deg",
+    "release_pos_x_m",
+    "release_pos_z_m",
+    "extension_m",
+    "induced_vert_break_cm",
+    "horz_break_cm",
+    "vert_rel_angle_deg",
+    "plate_loc_x_m",
+    "plate_loc_z_m",
+    "in_zone",
+    "zone13"
+   ],
+   "filters": [
+    "event_code",
+    "provider_code",
+    "pitch_type"
+   ]
+  },
+  {
+   "dataset": "baseball_game/plate_appearance",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "plate_appearance",
+   "entity": "PlateAppearance",
+   "label": "PlateAppearance（打席）",
+   "rows": 162,
+   "columns": [
+    "pa_key",
+    "game_code",
+    "inning_number",
+    "inning_half",
+    "pa_of_inning",
+    "batter_code",
+    "pitcher_code",
+    "outs_at_start",
+    "pa_result",
+    "is_at_bat",
+    "pitches",
+    "pa_seq"
+   ],
+   "filters": [
+    "game_code",
+    "batter_code",
+    "pitcher_code"
+   ]
+  },
+  {
+   "dataset": "baseball_game/quality_issue",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "quality_issue",
+   "entity": null,
+   "label": "資料品質紀錄",
+   "rows": 573,
+   "columns": [
+    "source",
+    "rule",
+    "severity",
+    "entity",
+    "field",
+    "raw_key",
+    "before",
+    "after",
+    "note"
+   ],
+   "filters": [
+    "rule",
+    "severity"
+   ]
+  },
+  {
+   "dataset": "baseball_game/swing_tracking",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "swing_tracking",
+   "entity": "SwingTracking",
+   "label": "SwingTracking（揮棒擊球量測）",
+   "rows": 134,
+   "columns": [
+    "event_code",
+    "provider_code",
+    "is_primary",
+    "exit_speed_kmh",
+    "launch_angle_deg",
+    "spray_angle_deg",
+    "est_distance_m",
+    "tagged_hit_type",
+    "tagged_hardness"
+   ],
+   "filters": [
+    "event_code",
+    "provider_code"
+   ]
+  },
+  {
+   "dataset": "baseball_game/team",
+   "domain": "baseball_game",
+   "domain_name": "棒球賽事",
+   "table": "team",
+   "entity": "Team",
+   "label": "Team（球隊）",
+   "rows": 4,
+   "columns": [
+    "team_code",
+    "team_full_name",
+    "team_abbr",
+    "league_level",
+    "src_team"
+   ],
+   "filters": [
+    "team_code"
+   ]
+  },
+  {
+   "dataset": "badminton_tournament/match",
+   "domain": "badminton_tournament",
+   "domain_name": "羽球賽事",
+   "table": "match",
+   "entity": "Match",
+   "label": "Match（單場對戰）",
+   "rows": 3935,
+   "columns": [
+    "match_code",
+    "tournament_code",
+    "match_date",
+    "venue_code",
+    "start_time",
+    "round_name",
+    "event_category",
+    "stage",
+    "match_no",
+    "discipline",
+    "event",
+    "side_a_player_code",
+    "side_b_player_code",
+    "side_a_pair_code",
+    "side_b_pair_code",
+    "side_a_p1",
+    "side_a_p2",
+    "side_b_p1",
+    "side_b_p2",
+    "side_a_team",
+    "side_b_team",
+    "side_a_seed",
+    "side_b_seed",
+    "status",
+    "duration_min",
+    "games_won_a",
+    "games_won_b",
+    "winner_side",
+    "score_text",
+    "raw_object_ref"
+   ],
+   "filters": [
+    "match_code",
+    "tournament_code",
+    "venue_code",
+    "event_category",
+    "discipline",
+    "side_a_player_code",
+    "side_b_player_code",
+    "side_a_pair_code",
+    "side_b_pair_code",
+    "status"
+   ]
+  },
+  {
+   "dataset": "badminton_tournament/match_game",
+   "domain": "badminton_tournament",
+   "domain_name": "羽球賽事",
+   "table": "match_game",
+   "entity": "MatchGame",
+   "label": "MatchGame（局）",
+   "rows": 6132,
+   "columns": [
+    "match_game_code",
+    "match_code",
+    "game_no",
+    "score_a_final",
+    "score_b_final"
+   ],
+   "filters": [
+    "match_game_code",
+    "match_code",
+    "game_no"
+   ]
+  },
+  {
+   "dataset": "badminton_tournament/organization",
+   "domain": "badminton_tournament",
+   "domain_name": "羽球賽事",
+   "table": "organization",
+   "entity": "Organization",
+   "label": "Organization（組織）",
+   "rows": 1,
+   "columns": [
+    "org_code",
+    "org_name",
+    "org_type",
+    "bwf_affiliated",
+    "sport_code"
+   ],
+   "filters": [
+    "org_code",
+    "sport_code"
+   ]
+  },
+  {
+   "dataset": "badminton_tournament/pair",
+   "domain": "badminton_tournament",
+   "domain_name": "羽球賽事",
+   "table": "pair",
+   "entity": "Pair",
+   "label": "Pair（雙打配對）",
+   "rows": 1057,
+   "columns": [
+    "pair_code",
+    "player_a_code",
+    "player_b_code",
+    "discipline"
+   ],
+   "filters": [
+    "pair_code",
+    "player_a_code",
+    "player_b_code",
+    "discipline"
+   ]
+  },
+  {
+   "dataset": "badminton_tournament/person",
+   "domain": "badminton_tournament",
+   "domain_name": "羽球賽事",
+   "table": "person",
+   "entity": "Person",
+   "label": "Person（人員）",
+   "rows": 1997,
+   "columns": [
+    "person_code",
+    "full_name_zh",
+    "person_role",
+    "teams"
+   ],
+   "filters": [
+    "person_code"
+   ]
+  },
+  {
+   "dataset": "badminton_tournament/quality_issue",
+   "domain": "badminton_tournament",
+   "domain_name": "羽球賽事",
+   "table": "quality_issue",
+   "entity": null,
+   "label": "資料品質紀錄",
+   "rows": 708,
+   "columns": [
+    "source",
+    "rule",
+    "severity",
+    "entity",
+    "field",
+    "raw_key",
+    "before",
+    "after",
+    "note"
+   ],
+   "filters": [
+    "rule",
+    "severity"
+   ]
+  },
+  {
+   "dataset": "badminton_tournament/tournament",
+   "domain": "badminton_tournament",
+   "domain_name": "羽球賽事",
+   "table": "tournament",
+   "entity": "Tournament",
+   "label": "Tournament（賽事）",
+   "rows": 2,
+   "columns": [
+    "tournament_code",
+    "tournament_name",
+    "tier",
+    "host_org_code",
+    "host_org",
+    "venue_code",
+    "venue_name",
+    "start_date",
+    "end_date",
+    "expected_matches"
+   ],
+   "filters": [
+    "tournament_code",
+    "host_org_code",
+    "venue_code"
+   ]
+  },
+  {
+   "dataset": "badminton_tournament/venue",
+   "domain": "badminton_tournament",
+   "domain_name": "羽球賽事",
+   "table": "venue",
+   "entity": "Venue",
+   "label": "Venue（場館）",
+   "rows": 2,
+   "columns": [
+    "venue_code",
+    "venue_name",
+    "venue_type",
+    "city_code"
+   ],
+   "filters": [
+    "venue_code",
+    "city_code"
+   ]
+  },
+  {
+   "dataset": "badminton_shuttleset/match",
+   "domain": "badminton_shuttleset",
+   "domain_name": "羽球技戰術",
+   "table": "match",
+   "entity": "Match",
+   "label": "Match（單場對戰）",
+   "rows": 44,
+   "columns": [
+    "match_code",
+    "tournament_code",
+    "match_date",
+    "round_name",
+    "discipline",
+    "status",
+    "side_a_player_code",
+    "side_b_player_code",
+    "duration_min",
+    "games_won_a",
+    "games_won_b",
+    "winner_side",
+    "video_uri",
+    "side_a_name",
+    "side_b_name"
+   ],
+   "filters": [
+    "match_code",
+    "tournament_code",
+    "discipline",
+    "status",
+    "side_a_player_code",
+    "side_b_player_code"
+   ]
+  },
+  {
+   "dataset": "badminton_shuttleset/match_game",
+   "domain": "badminton_shuttleset",
+   "domain_name": "羽球技戰術",
+   "table": "match_game",
+   "entity": "MatchGame",
+   "label": "MatchGame（局）",
+   "rows": 104,
+   "columns": [
+    "match_game_code",
+    "match_code",
+    "game_no",
+    "score_a_final",
+    "score_b_final"
+   ],
+   "filters": [
+    "match_game_code",
+    "match_code",
+    "game_no"
+   ]
+  },
+  {
+   "dataset": "badminton_shuttleset/person",
+   "domain": "badminton_shuttleset",
+   "domain_name": "羽球技戰術",
+   "table": "person",
+   "entity": "Person",
+   "label": "Person（人員）",
+   "rows": 27,
+   "columns": [
+    "person_code",
+    "full_name_en",
+    "full_name_zh",
+    "person_role",
+    "player_level"
+   ],
+   "filters": [
+    "person_code"
+   ]
+  },
+  {
+   "dataset": "badminton_shuttleset/quality_issue",
+   "domain": "badminton_shuttleset",
+   "domain_name": "羽球技戰術",
+   "table": "quality_issue",
+   "entity": null,
+   "label": "資料品質紀錄",
+   "rows": 232,
+   "columns": [
+    "source",
+    "rule",
+    "severity",
+    "entity",
+    "field",
+    "raw_key",
+    "before",
+    "after",
+    "note"
+   ],
+   "filters": [
+    "rule",
+    "severity"
+   ]
+  },
+  {
+   "dataset": "badminton_shuttleset/rally",
+   "domain": "badminton_shuttleset",
+   "domain_name": "羽球技戰術",
+   "table": "rally",
+   "entity": "Rally",
+   "label": "Rally（回合）",
+   "rows": 3683,
+   "columns": [
+    "rally_code",
+    "match_game_code",
+    "match_code",
+    "rally_seq",
+    "score_a",
+    "score_b",
+    "win_reason",
+    "point_to",
+    "shots"
+   ],
+   "filters": [
+    "rally_code",
+    "match_game_code",
+    "match_code"
+   ]
+  },
+  {
+   "dataset": "badminton_shuttleset/shot",
+   "domain": "badminton_shuttleset",
+   "domain_name": "羽球技戰術",
+   "table": "shot",
+   "entity": "Shot",
+   "label": "Shot（擊球）",
+   "rows": 36484,
+   "columns": [
+    "shot_code",
+    "rally_code",
+    "match_code",
+    "game_no",
+    "person_code",
+    "side",
+    "shot_seq",
+    "shot_type",
+    "shot_type_src",
+    "landing_x_m",
+    "landing_y_m",
+    "landing_height",
+    "is_around_head",
+    "backhand",
+    "is_winner",
+    "error_type",
+    "video_frame_no",
+    "video_time",
+    "landing_area",
+    "hit_x_m",
+    "hit_y_m",
+    "hit_area",
+    "player_x_m",
+    "player_y_m",
+    "player_area",
+    "opponent_x_m",
+    "opponent_y_m",
+    "opponent_area",
+    "provider_code"
+   ],
+   "filters": [
+    "shot_code",
+    "rally_code",
+    "match_code",
+    "game_no",
+    "person_code",
+    "side",
+    "shot_type",
+    "provider_code"
+   ]
+  },
+  {
+   "dataset": "badminton_shuttleset/tournament",
+   "domain": "badminton_shuttleset",
+   "domain_name": "羽球技戰術",
+   "table": "tournament",
+   "entity": "Tournament",
+   "label": "Tournament（賽事）",
+   "rows": 16,
+   "columns": [
+    "tournament_code",
+    "tournament_name",
+    "tier",
+    "year"
+   ],
+   "filters": [
+    "tournament_code"
+   ]
+  }
+ ]
+}
