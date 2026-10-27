@@ -1,0 +1,1190 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "臺灣運動數據標準　羽球　API",
+    "version": "1.0.0",
+    "description": "由 badminton/entities.yaml 產生。路徑參數採業務碼，內部流水號主鍵不對外暴露。"
+  },
+  "paths": {
+    "/organizations": {
+      "post": {
+        "summary": "上傳 Organization（組織）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Organization"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Organization（組織）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Organization"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{org_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Organization",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "org_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "組織業務碼。對外顯示與交換用之可讀識別碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/data-providers": {
+      "post": {
+        "summary": "上傳 DataProvider（資料提供者）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataProvider"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 DataProvider（資料提供者）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataProvider"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data-providers/{provider_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 DataProvider",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "provider_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "資料提供者業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataProvider"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/venues": {
+      "post": {
+        "summary": "上傳 Venue（場館）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Venue"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Venue（場館）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Venue"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/venues/{venue_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Venue",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "venue_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "場館業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/courts": {
+      "post": {
+        "summary": "上傳 Court（場地）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Court"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Court（場地）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Court"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/courts/{court_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Court",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "court_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "場地業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Court"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/tournaments": {
+      "post": {
+        "summary": "上傳 Tournament（賽事）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tournament"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Tournament（賽事）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tournament"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tournaments/{tournament_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Tournament",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "tournament_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "賽事業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tournament"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/persons": {
+      "post": {
+        "summary": "上傳 Person（人員）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Person"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Person（人員）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Person"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/persons/{person_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Person",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "person_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "人員業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Person"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/pairs": {
+      "post": {
+        "summary": "上傳 Pair（雙打配對）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pair"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Pair（雙打配對）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Pair"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pairs/{pair_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Pair",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "pair_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "雙打配對業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pair"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/rankings": {
+      "post": {
+        "summary": "上傳 Ranking（排名）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ranking"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Ranking（排名）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ranking"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rankings/{ranking_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Ranking",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "ranking_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "排名紀錄業務碼。以人員業務碼與排名日期組成"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ranking"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/equipments": {
+      "post": {
+        "summary": "上傳 Equipment（裝備）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Equipment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Equipment（裝備）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Equipment"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/equipments/{equipment_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Equipment",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "equipment_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "裝備業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Equipment"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/matchs": {
+      "post": {
+        "summary": "上傳 Match（單場對戰）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Match"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Match（單場對戰）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Match"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matchs/{match_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Match",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "match_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "單場對戰業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Match"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/match-games": {
+      "post": {
+        "summary": "上傳 MatchGame（局）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchGame"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 MatchGame（局）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MatchGame"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/match-games/{match_game_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 MatchGame",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "match_game_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "局業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchGame"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/rallys": {
+      "post": {
+        "summary": "上傳 Rally（回合）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rally"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Rally（回合）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Rally"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rallys/{rally_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Rally",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "rally_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "回合業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rally"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/shots": {
+      "post": {
+        "summary": "上傳 Shot（擊球）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Shot"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Shot（擊球）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Shot"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shots/{shot_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Shot",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "shot_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "擊球業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shot"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/sessions": {
+      "post": {
+        "summary": "上傳 Session（訓練課次）",
+        "tags": [
+          "羽球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Session"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Session（訓練課次）",
+        "tags": [
+          "羽球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{session_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Session",
+        "tags": [
+          "羽球"
+        ],
+        "parameters": [
+          {
+            "name": "session_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "訓練課次業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Organization": {
+        "$ref": "./../schema/badminton/organization.schema.json"
+      },
+      "DataProvider": {
+        "$ref": "./../schema/badminton/data_provider.schema.json"
+      },
+      "Venue": {
+        "$ref": "./../schema/badminton/venue.schema.json"
+      },
+      "Court": {
+        "$ref": "./../schema/badminton/court.schema.json"
+      },
+      "Tournament": {
+        "$ref": "./../schema/badminton/tournament.schema.json"
+      },
+      "Person": {
+        "$ref": "./../schema/badminton/person.schema.json"
+      },
+      "Pair": {
+        "$ref": "./../schema/badminton/pair.schema.json"
+      },
+      "Ranking": {
+        "$ref": "./../schema/badminton/ranking.schema.json"
+      },
+      "Equipment": {
+        "$ref": "./../schema/badminton/equipment.schema.json"
+      },
+      "Match": {
+        "$ref": "./../schema/badminton/match.schema.json"
+      },
+      "MatchGame": {
+        "$ref": "./../schema/badminton/match_game.schema.json"
+      },
+      "Rally": {
+        "$ref": "./../schema/badminton/rally.schema.json"
+      },
+      "Shot": {
+        "$ref": "./../schema/badminton/shot.schema.json"
+      },
+      "Session": {
+        "$ref": "./../schema/badminton/session.schema.json"
+      }
+    }
+  }
+}

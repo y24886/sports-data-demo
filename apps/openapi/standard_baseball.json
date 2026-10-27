@@ -1,0 +1,1672 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "臺灣運動數據標準　棒球　API",
+    "version": "1.0.0",
+    "description": "由 baseball/entities.yaml 產生。路徑參數採業務碼，內部流水號主鍵不對外暴露。"
+  },
+  "paths": {
+    "/organizations": {
+      "post": {
+        "summary": "上傳 Organization（組織）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Organization"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Organization（組織）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Organization"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/organizations/{org_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Organization",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "org_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "組織業務碼。對外顯示與交換用之可讀識別碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/data-providers": {
+      "post": {
+        "summary": "上傳 DataProvider（資料提供者）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataProvider"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 DataProvider（資料提供者）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataProvider"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data-providers/{provider_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 DataProvider",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "provider_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "提供者業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataProvider"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/venues": {
+      "post": {
+        "summary": "上傳 Venue（場館）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Venue"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Venue（場館）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Venue"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/venues/{venue_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Venue",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "venue_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "場館業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venue"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/teams": {
+      "post": {
+        "summary": "上傳 Team（球隊）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Team"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Team（球隊）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Team"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teams/{team_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Team",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "team_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "球隊業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/tournaments": {
+      "post": {
+        "summary": "上傳 Tournament（賽事）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tournament"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Tournament（賽事）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tournament"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tournaments/{tournament_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Tournament",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "tournament_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "賽事業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tournament"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/persons": {
+      "post": {
+        "summary": "上傳 Person（人員）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Person"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Person（人員）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Person"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/persons/{person_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Person",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "person_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "人員業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Person"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/rosters": {
+      "post": {
+        "summary": "上傳 Roster（名冊）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Roster"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Roster（名冊）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Roster"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/games": {
+      "post": {
+        "summary": "上傳 Game（比賽）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Game"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Game（比賽）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Game"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/games/{game_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Game",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "game_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "比賽業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Game"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/game-segments": {
+      "post": {
+        "summary": "上傳 GameSegment（比賽區段）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameSegment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 GameSegment（比賽區段）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameSegment"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/game-data-sources": {
+      "post": {
+        "summary": "上傳 GameDataSource（比賽資料來源）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameDataSource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 GameDataSource（比賽資料來源）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameDataSource"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/game-lineups": {
+      "post": {
+        "summary": "上傳 GameLineup（先發名單）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameLineup"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 GameLineup（先發名單）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameLineup"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/game-lineups/{position_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 GameLineup",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "position_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "先發守備位置代號"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameLineup"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/game-officials": {
+      "post": {
+        "summary": "上傳 GameOfficial（裁判指派）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameOfficial"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 GameOfficial（裁判指派）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameOfficial"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions": {
+      "post": {
+        "summary": "上傳 Session（訓練課次）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Session"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Session（訓練課次）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessions/{session_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 Session",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "session_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "課次業務碼"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/plate-appearances": {
+      "post": {
+        "summary": "上傳 PlateAppearance（打席）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlateAppearance"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 PlateAppearance（打席）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlateAppearance"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events": {
+      "post": {
+        "summary": "上傳 Event（比賽事件）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 Event（比賽事件）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Event"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pitch-trackings": {
+      "post": {
+        "summary": "上傳 PitchTracking（投球量測）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PitchTracking"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 PitchTracking（投球量測）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PitchTracking"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/swing-trackings": {
+      "post": {
+        "summary": "上傳 SwingTracking（揮棒擊球量測）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwingTracking"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 SwingTracking（揮棒擊球量測）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SwingTracking"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/event-player-trackings": {
+      "post": {
+        "summary": "上傳 EventPlayerTracking（跑壘守備追蹤）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventPlayerTracking"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 EventPlayerTracking（跑壘守備追蹤）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventPlayerTracking"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/event-player-trackings/{position_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 EventPlayerTracking",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "position_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "守備位置代號"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPlayerTracking"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/biomechanics-frames": {
+      "post": {
+        "summary": "上傳 BiomechanicsFrame（生物力學資料流）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BiomechanicsFrame"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 BiomechanicsFrame（生物力學資料流）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BiomechanicsFrame"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fielding-plays": {
+      "post": {
+        "summary": "上傳 FieldingPlay（守備事件）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldingPlay"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 FieldingPlay（守備事件）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FieldingPlay"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/baserunning-events": {
+      "post": {
+        "summary": "上傳 BaserunningEvent（跑壘事件）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaserunningEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 BaserunningEvent（跑壘事件）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BaserunningEvent"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lineup-changes": {
+      "post": {
+        "summary": "上傳 LineupChange（打線異動）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineupChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 LineupChange（打線異動）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LineupChange"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lineup-changes/{position_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 LineupChange",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "position_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "換人後之守備位置代號"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineupChange"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/video-assets": {
+      "post": {
+        "summary": "上傳 VideoAsset（影像檔）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VideoAsset"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 VideoAsset（影像檔）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VideoAsset"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/expected-models": {
+      "post": {
+        "summary": "上傳 ExpectedModel（期望值模型）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpectedModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 ExpectedModel（期望值模型）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpectedModel"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/expected-models/{model_code}": {
+      "get": {
+        "summary": "以業務碼取得單筆 ExpectedModel",
+        "tags": [
+          "棒球"
+        ],
+        "parameters": [
+          {
+            "name": "model_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "模型業務碼。對外可讀之模型版本代號"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "單筆資料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpectedModel"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "查無資料"
+          }
+        }
+      }
+    },
+    "/athlete-metrics": {
+      "post": {
+        "summary": "上傳 AthleteMetric（體能量測）",
+        "tags": [
+          "棒球"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AthleteMetric"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "建立成功"
+          },
+          "422": {
+            "description": "未通過資料契約驗證"
+          }
+        }
+      },
+      "get": {
+        "summary": "查詢 AthleteMetric（體能量測）",
+        "tags": [
+          "棒球"
+        ],
+        "responses": {
+          "200": {
+            "description": "查詢結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AthleteMetric"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Organization": {
+        "$ref": "./../schema/baseball/organization.schema.json"
+      },
+      "DataProvider": {
+        "$ref": "./../schema/baseball/data_provider.schema.json"
+      },
+      "Venue": {
+        "$ref": "./../schema/baseball/venue.schema.json"
+      },
+      "Team": {
+        "$ref": "./../schema/baseball/team.schema.json"
+      },
+      "Tournament": {
+        "$ref": "./../schema/baseball/tournament.schema.json"
+      },
+      "Person": {
+        "$ref": "./../schema/baseball/person.schema.json"
+      },
+      "Roster": {
+        "$ref": "./../schema/baseball/roster.schema.json"
+      },
+      "Game": {
+        "$ref": "./../schema/baseball/game.schema.json"
+      },
+      "GameSegment": {
+        "$ref": "./../schema/baseball/game_segment.schema.json"
+      },
+      "GameDataSource": {
+        "$ref": "./../schema/baseball/game_data_source.schema.json"
+      },
+      "GameLineup": {
+        "$ref": "./../schema/baseball/game_lineup.schema.json"
+      },
+      "GameOfficial": {
+        "$ref": "./../schema/baseball/game_official.schema.json"
+      },
+      "Session": {
+        "$ref": "./../schema/baseball/session.schema.json"
+      },
+      "PlateAppearance": {
+        "$ref": "./../schema/baseball/plate_appearance.schema.json"
+      },
+      "Event": {
+        "$ref": "./../schema/baseball/event.schema.json"
+      },
+      "PitchTracking": {
+        "$ref": "./../schema/baseball/pitch_tracking.schema.json"
+      },
+      "SwingTracking": {
+        "$ref": "./../schema/baseball/swing_tracking.schema.json"
+      },
+      "EventPlayerTracking": {
+        "$ref": "./../schema/baseball/event_player_tracking.schema.json"
+      },
+      "BiomechanicsFrame": {
+        "$ref": "./../schema/baseball/biomechanics_frame.schema.json"
+      },
+      "FieldingPlay": {
+        "$ref": "./../schema/baseball/fielding_play.schema.json"
+      },
+      "BaserunningEvent": {
+        "$ref": "./../schema/baseball/baserunning_event.schema.json"
+      },
+      "LineupChange": {
+        "$ref": "./../schema/baseball/lineup_change.schema.json"
+      },
+      "VideoAsset": {
+        "$ref": "./../schema/baseball/video_asset.schema.json"
+      },
+      "ExpectedModel": {
+        "$ref": "./../schema/baseball/expected_model.schema.json"
+      },
+      "AthleteMetric": {
+        "$ref": "./../schema/baseball/athlete_metric.schema.json"
+      }
+    }
+  }
+}

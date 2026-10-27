@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>臺灣運動數據標準｜示範應用</title>
-<meta name="description" content="臺灣運動數據標準 1.0.0 之規範書線上版、開放資料 API 與真實資料分析頁面">
+<meta name="description" content="臺灣運動數據標準 1.0.0 之示範應用：真實資料分析頁面、資料品質檢核回饋、規範書線上版與 API 展示頁">
 <style>
   :root { --bg: #F5F7FA; --card: #FFFFFF; --ink: #1D293D; --sub: #62748E; --line: #E2E8F0; --brand: #1E4E8C; --brand-soft: #E8EEF7; --accent: #F29027; }
   * { box-sizing: border-box; }
@@ -29,12 +29,12 @@
 <main>
   <span class="tag">資料標準 1.0.0</span><span class="tag">規範書第 1.0 版</span>
   <h1>臺灣運動數據標準　示範應用</h1>
-  <p class="lead">棒球與羽球之資料標準規範書、依標準開放之資料 API，以及以真實資料建置之分析頁面。規範書線上版與 Word／PDF 由同一份資料標準來源自動產生，內容一致。</p>
+  <p class="lead">以三份真實資料（運科中心示範賽、羽協全國排名賽、ShuttleSet）依標準建置之分析頁面、資料品質檢核回饋與 API 展示頁，以及規範書線上版。本站為示範快照：頁面與資料與正式部署版相同，API 不即時呼叫，改以實際資料之範例回應展示。</p>
 
   <h2>資料標準</h2>
   <div class="grid">
     <a class="card primary" href="apps/#/standard"><b>規範書（線上版）</b><span>三部全文、資料典、代碼表、ERD；可下載 Word 與 PDF</span></a>
-    <a class="card" href="apps/#/open-api"><b>開放資料 API</b><span>Staging 層 25 個資料集之 Swagger UI 展示頁</span></a>
+    <a class="card" href="apps/#/open-api"><b>API 展示頁</b><span>開放資料 API（Staging 層 25 個資料集）與資料交換規格之 Swagger UI</span></a>
   </div>
 
   <h2>分析頁面</h2>
@@ -42,6 +42,11 @@
     <a class="card" href="apps/#/baseball/game"><b>棒球｜賽事分析</b><span>運科中心示範賽：逐局比分、投球與揮棒量測</span></a>
     <a class="card" href="apps/#/badminton/tournament"><b>羽球｜賽事分析</b><span>兩次全國排名賽：賽程表、競爭與時長、選手查詢</span></a>
     <a class="card" href="apps/#/badminton/tactics"><b>羽球｜技戰術分析</b><span>ShuttleSet 國際賽逐拍標註：球種、落點與熱力圖</span></a>
+  </div>
+
+  <h2>資料品質</h2>
+  <div class="grid">
+    <a class="card primary" href="apps/#/quality"><b>資料品質檢核回饋</b><span>三個資料源頭之上傳筆數、入庫筆數、欄位合規率、改善建議與標準化前後對照</span></a>
   </div>
 
   <h2>說明</h2>
