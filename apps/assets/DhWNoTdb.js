@@ -1,1 +1,0 @@
-import{_ as o}from"./DlAUqK2U.js";import{o as s,c as t,J as r}from"./CC750oxt.js";const a={},c={class:"px-4 sm:px-6 py-6 max-w-[1280px] mx-auto"};function n(e,m){return s(),t("main",c,[r(e.$slots,"default")])}const f=o(a,[["render",n]]);export{f as default};
