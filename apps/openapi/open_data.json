@@ -3,7 +3,7 @@
  "info": {
   "title": "臺灣運動數據標準｜開放資料 API",
   "version": "1.0.0",
-  "description": "本專案實際處理之三份真實資料，依《臺灣運動數據標準》1.0.0 清整後之 **Staging 層**資料。\n\n- **一張表對應標準之一個實體，一欄對應資料典之一個欄位**：欄位名稱、型別、代碼值與規範書相同，讀規範書即能使用。\n- 外來鍵以**業務碼**（如 `tournament_code`）表示；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。\n- 每次查詢回傳 `total`（符合條件總筆數）與一頁資料；以 `limit`／`offset` 分頁，以欄位名稱為參數篩選。\n- 需 API 金鑰（標頭 `X-API-Key`）；展示頁已預先填入公開唯讀金鑰。流量上限依金鑰角色。\n\n**為何開放 Staging 而非 Mart**：Staging 是依標準清整後之資料，欄位即規範書所定，不隨頁面改版而變，適合作為對外承諾之介面；Mart 為特定圖表之彙總寬表，供分析頁面使用（`/api/v1/demo/*.json`），不作為開放介面。",
+  "description": "本專案實際處理之三份真實資料，依《臺灣運動數據標準》1.0.0 清整後之 **Staging 層**資料。\n\n- **一張表對應標準之一個實體，一欄對應資料典之一個欄位**：欄位名稱、型別、代碼值與規範書相同，讀規範書即能使用。\n- 外來鍵以**業務碼**（如 `tournament_code`）表示；標示「延伸欄位」者為來源追溯或分析輔助欄位，不屬標準。\n- 每次查詢回傳 `total`（符合條件總筆數）與一頁資料；以 `limit`／`offset` 分頁，以欄位名稱為參數篩選。\n- 公開查詢，免登入、免金鑰；每個來源 IP 每分鐘有呼叫上限（超過回 429）。\n\n**為何開放 Staging 而非 Mart**：Staging 是依標準清整後之資料，欄位即規範書所定，不隨頁面改版而變，適合作為對外承諾之介面；Mart 為特定圖表之彙總寬表，供分析頁面使用（`/api/v1/demo/*.json`），不作為開放介面。",
   "contact": {
    "name": "國家運動科學中心"
   }
@@ -12,11 +12,6 @@
   {
    "url": "/api/v1/open",
    "description": "與示範網站同一主機（部署於國網中心後可直接 Try it out）"
-  }
- ],
- "security": [
-  {
-   "APIKeyHeader": []
   }
  ],
  "tags": [
@@ -124,9 +119,6 @@
         }
        }
       }
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      }
     }
    }
@@ -286,9 +278,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -416,9 +405,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -529,9 +515,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -655,9 +638,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -789,9 +769,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -984,9 +961,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -1096,9 +1070,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -1311,9 +1282,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -1441,9 +1409,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -1562,9 +1527,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -1700,9 +1662,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -1812,9 +1771,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -1938,9 +1894,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -2074,9 +2027,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -2195,9 +2145,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -2306,9 +2253,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -2509,9 +2453,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -2632,9 +2573,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -2796,9 +2734,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -2921,9 +2856,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -3071,9 +3003,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -3208,9 +3137,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -3333,9 +3259,6 @@
      },
      "400": {
       "$ref": "#/components/responses/BadRequest"
-     },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
      },
      "429": {
       "$ref": "#/components/responses/TooMany"
@@ -3460,9 +3383,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -3574,9 +3494,6 @@
      "400": {
       "$ref": "#/components/responses/BadRequest"
      },
-     "401": {
-      "$ref": "#/components/responses/Unauthorized"
-     },
      "429": {
       "$ref": "#/components/responses/TooMany"
      }
@@ -3585,13 +3502,6 @@
   }
  },
  "components": {
-  "securitySchemes": {
-   "APIKeyHeader": {
-    "type": "apiKey",
-    "in": "header",
-    "name": "X-API-Key"
-   }
-  },
   "responses": {
    "BadRequest": {
     "description": "參數錯誤（未知之欄位、型別不符等）",
@@ -3603,22 +3513,12 @@
      }
     }
    },
-   "Unauthorized": {
-    "description": "未提供或無效之 API 金鑰",
-    "content": {
-     "application/json": {
-      "example": {
-       "detail": "未提供或無效之 API 金鑰（標頭 X-API-Key）"
-      }
-     }
-    }
-   },
    "TooMany": {
     "description": "超過流量上限",
     "content": {
      "application/json": {
       "example": {
-       "detail": "已超過每分鐘 60 次之流量上限，請於 12 秒後再試"
+       "detail": "已超過每分鐘 120 次之流量上限，請於 12 秒後再試"
       }
      }
     }

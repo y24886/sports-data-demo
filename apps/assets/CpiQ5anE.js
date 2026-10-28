@@ -1,1 +1,0 @@
-import{u as r,g as u,l as s}from"./DcUt0Nnj.js";function i(e){const{dataBase:o}=r().public,a=s(null),n=s(null);return u(async()=>{try{const t=await fetch(`${o}/${e}.json`);if(!t.ok)throw new Error(t.statusText);a.value=await t.json()}catch(t){n.value=String(t?.message||t)}}),{data:a,error:n}}export{i as u};

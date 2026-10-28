@@ -1,4 +1,4 @@
-import{u as p,_ as m}from"./B8mG9TXv.js";import{_ as b}from"./uPXI2GD6.js";import{e as g,o as i,c as r,b as a,w as s,d as e,a as t,F as h,r as f,t as o}from"./DcUt0Nnj.js";const w={class:"grid grid-cols-1 gap-6"},_={class:"grid sm:grid-cols-4 gap-3 text-sm"},x={class:"text-brand-600 font-bold mb-1"},S={class:"text-slate-600 leading-6"},v=`<iframe id="tiss-bbl-game" src="https://（部署網域）/#/baseball/game?embed=1"
+import{u as p,_ as m}from"./1-IXe-xg.js";import{_ as b}from"./Bpz7paMc.js";import{e as g,o as i,c as r,b as a,w as s,d as e,a as t,F as h,r as f,t as o}from"./CpS2ANFB.js";const w={class:"grid grid-cols-1 gap-6"},_={class:"grid sm:grid-cols-4 gap-3 text-sm"},x={class:"text-brand-600 font-bold mb-1"},S={class:"text-slate-600 leading-6"},v=`<iframe id="tiss-bbl-game" src="https://（部署網域）/#/baseball/game?embed=1"
         style="width:100%;border:0" loading="lazy" title="棒球賽事分析"></iframe>
 <script>
   window.addEventListener('message', (e) => {
