@@ -1,1 +1,0 @@
-import{e as t,f as n,c as o,n as s,o as r}from"./kS4UsNYc.js";const l=t({__name:"index",async setup(c){let e,a;return[e,a]=n(()=>s("/baseball/game",{replace:!0})),await e,a(),(_,p)=>(r(),o("div"))}});export{l as default};
